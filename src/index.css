@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/* Design tokens: change the brand here and every screen follows. */
+@theme {
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-slate-100 text-slate-900 antialiased;
+  }
+}
+
+/* Numbers in columns line up when every digit has the same width. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Space for the phone's home bar under the bottom navigation. */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
