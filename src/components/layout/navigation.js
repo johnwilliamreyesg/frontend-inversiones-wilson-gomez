@@ -1,4 +1,4 @@
-import { Banknote, BarChart3, HandCoins, Home, Receipt, ShieldCheck, Users, Wallet } from 'lucide-react';
+import { Banknote, BarChart3, HandCoins, Home, Percent, Receipt, ShieldCheck, Users, Wallet } from 'lucide-react';
 
 /**
  * Menu entries. `permission` hides an entry the user cannot open;
@@ -14,6 +14,7 @@ export const NAVIGATION = [
   { to: '/expenses', label: 'Gastos', icon: Receipt, permission: 'expenses.read' },
   { to: '/reports', label: 'Reportes', icon: BarChart3, permission: 'reports.read' },
   { to: '/users', label: 'Usuarios y roles', icon: ShieldCheck, permission: 'users.manage' },
+  { to: '/interest-rates', label: 'Tasas de interés', icon: Percent, permission: 'interest_rates.manage' },
 ];
 
 export const visibleNavigation = (can) => NAVIGATION.filter((item) => !item.permission || can(item.permission));

@@ -4,7 +4,6 @@ import { Ban, HandCoins, Undo2 } from 'lucide-react';
 import { useCancelLoan, useLoan, useLoanPayments } from './loans.queries.js';
 import { LoanStatusBadge } from './LoanRows.jsx';
 import { describeTerms, isOpenEnded } from './loan-terms.js';
-import { paymentSuggestions } from './loan-amounts.js';
 import { PaymentDialog } from '../payments/PaymentDialog.jsx';
 import { VoidPaymentDialog } from '../payments/VoidPaymentDialog.jsx';
 import { useAuth } from '../../auth/AuthProvider.jsx';
@@ -13,7 +12,7 @@ import { Card, DescriptionList, StatCard } from '../../components/ui/Card.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { ConfirmDialog } from '../../components/ui/Modal.jsx';
 import { Badge, EmptyState, ErrorState, LoadingState } from '../../components/ui/Feedback.jsx';
-import { INSTALLMENT_STATUS, FREQUENCY, PAYMENT_METHOD } from '../../utils/labels.js';
+import { INSTALLMENT_STATUS, FREQUENCY, PAYMENT_METHOD, PAYMENT_TYPE, RECALCULATION } from '../../utils/labels.js';
 import { formatDate, formatDateTime, formatDays, formatMoney } from '../../utils/format.js';
 import { today as getToday } from '../../utils/dates.js';
 
@@ -107,9 +106,8 @@ export function LoanDetailPage() {
       <PaymentDialog
         open={paying}
         onClose={() => setPaying(false)}
-        loan={loan}
-        suggestions={paymentSuggestions(loan, today)}
-        hint={openEnded ? 'Crédito sin plazo: lo que pase del interés vencido se abona a capital.' : null}
+        loanId={loan.id}
+        clientName={loan.clientName}
       />
       <ConfirmDialog
         open={cancelling}
@@ -198,6 +196,8 @@ function PaymentsCard({ loanId, canVoid }) {
                   <span className={`tabular font-semibold ${payment.voidedAt ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{formatMoney(payment.amount)}</span>
                   <span className="text-sm text-slate-500">{formatDate(payment.paymentDate)}</span>
                   <Badge>{PAYMENT_METHOD[payment.paymentMethod]}</Badge>
+                  {payment.paymentType !== 'installment' && <Badge tone="info">{PAYMENT_TYPE[payment.paymentType]}</Badge>}
+                  {payment.recalculation && <Badge>{RECALCULATION[payment.recalculation]}</Badge>}
                   {payment.voidedAt && <Badge tone="danger">Anulado</Badge>}
                 </p>
                 <p className="text-sm text-slate-500">

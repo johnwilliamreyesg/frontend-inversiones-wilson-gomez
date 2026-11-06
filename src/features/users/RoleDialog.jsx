@@ -10,6 +10,7 @@ import { ApiError } from '../../api/api-error.js';
 const MODULE_LABELS = {
   clients: 'Clientes',
   loans: 'Créditos',
+  interest_rates: 'Tasas de interés',
   payments: 'Cobros y pagos',
   expenses: 'Gastos',
   reports: 'Reportes',

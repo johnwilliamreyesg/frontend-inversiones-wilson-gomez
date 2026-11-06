@@ -74,8 +74,8 @@ export function CollectionsPage() {
       <PaymentDialog
         open={Boolean(paying)}
         onClose={() => setPaying(null)}
-        loan={paying && { id: paying.loanId, clientName: paying.clientName }}
-        suggestions={paying ? [{ label: 'Lo vencido', amount: paying.amountDue }] : []}
+        loanId={paying?.loanId}
+        clientName={paying?.clientName}
       />
     </>
   );

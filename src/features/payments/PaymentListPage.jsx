@@ -12,7 +12,7 @@ import { Button } from '../../components/ui/Button.jsx';
 import { CheckboxField, SelectField, TextField } from '../../components/ui/Field.jsx';
 import { Pagination } from '../../components/ui/ListControls.jsx';
 import { Badge, EmptyState, ErrorState, LoadingState } from '../../components/ui/Feedback.jsx';
-import { PAYMENT_METHOD } from '../../utils/labels.js';
+import { PAYMENT_METHOD, PAYMENT_TYPE } from '../../utils/labels.js';
 import { formatDate, formatMoney } from '../../utils/format.js';
 import { today as getToday } from '../../utils/dates.js';
 
@@ -83,6 +83,7 @@ export function PaymentListPage() {
                       <Link to={`/loans/${payment.loanId}`} className="truncate text-brand-700 hover:underline">
                         {payment.clientName} · #{payment.loanId}
                       </Link>
+                      {payment.paymentType !== 'installment' && <Badge tone="info">{PAYMENT_TYPE[payment.paymentType]}</Badge>}
                       {payment.voidedAt && <Badge tone="danger">Anulado</Badge>}
                     </p>
                     <p className="text-sm text-slate-500">

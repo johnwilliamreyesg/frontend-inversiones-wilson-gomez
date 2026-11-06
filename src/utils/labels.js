@@ -24,4 +24,15 @@ export const PAYMENT_METHOD = {
   transfer: 'Transferencia',
 };
 
+export const PAYMENT_TYPE = {
+  installment: 'Cuota',
+  interest_only: 'Solo intereses',
+  principal: 'Abono a capital',
+};
+
+export const RECALCULATION = {
+  reduce_installment: 'Bajar cuotas',
+  reduce_term: 'Acortar plazo',
+};
+
 export const label = (map, code) => map[code]?.label ?? map[code] ?? code;

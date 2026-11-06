@@ -56,7 +56,7 @@ const checkTerms = (values, ctx, { today }) => {
   }
 
   const rate = parseDecimal(values.monthlyInterestRate);
-  if (rate === null) addIssue(ctx, 'monthlyInterestRate', 'Escriba la tasa de interés mensual.');
+  if (rate === null) addIssue(ctx, 'monthlyInterestRate', 'Elija la tasa de interés mensual.');
   else if (Number.isNaN(rate) || rate <= 0 || rate > 100) addIssue(ctx, 'monthlyInterestRate', 'Escriba una tasa entre 0 y 100 (máximo 2 decimales).');
 
   const day = parseInteger(values.paymentDay);

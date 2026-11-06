@@ -3,17 +3,18 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreateLoan, useLoanPreview } from './loans.queries.js';
+import { useInterestRates } from '../interest-rates/interest-rates.queries.js';
 import { LOAN_FIELDS, emptyLoanForm, loanFormSchema, termsSchema, toLoanPayload, toTermsPayload } from './loan-form.js';
 import { useClient } from '../clients/clients.queries.js';
 import { ClientPicker } from '../clients/ClientPicker.jsx';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { applyServerErrors } from '../../utils/form-errors.js';
 import { today as getToday } from '../../utils/dates.js';
-import { formatDate, formatMoney } from '../../utils/format.js';
+import { formatDate, formatMoney, formatPercent } from '../../utils/format.js';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { Card } from '../../components/ui/Card.jsx';
 import { Button } from '../../components/ui/Button.jsx';
-import { TextAreaField, TextField } from '../../components/ui/Field.jsx';
+import { SelectField, TextAreaField, TextField } from '../../components/ui/Field.jsx';
 import { MoneyField } from '../../components/ui/MoneyField.jsx';
 import { SegmentedControl } from '../../components/ui/ListControls.jsx';
 import { Alert, ErrorAlert } from '../../components/ui/Feedback.jsx';
@@ -53,6 +54,7 @@ function LoanForm({ presetClient }) {
 
   const values = useWatch({ control });
   const frequency = values.frequency;
+  const rates = useInterestRates({ enabled: frequency === 'monthly' });
 
   // Preview as soon as the money terms are complete (after a short pause in typing).
   // Compared as text: the watched values are a new object on every render.
@@ -125,7 +127,7 @@ function LoanForm({ presetClient }) {
               ) : (
                 <>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <TextField label="Interés mensual (%)" required inputMode="decimal" placeholder="10" error={errors.monthlyInterestRate?.message} {...register('monthlyInterestRate')} />
+                    <RateSelect rates={rates} error={errors.monthlyInterestRate?.message} {...register('monthlyInterestRate')} />
                     <TextField
                       label="Día de pago"
                       inputMode="numeric"
@@ -163,6 +165,26 @@ function LoanForm({ presetClient }) {
         </div>
       </form>
     </>
+  );
+}
+
+/** The rates of the catalog (only active ones can be used for a new loan). */
+function RateSelect({ rates, error, ...field }) {
+  const options = rates.data ?? [];
+  const hint = rates.error
+    ? 'No se pudieron cargar las tasas.'
+    : rates.data && options.length === 0
+      ? 'No hay tasas activas. Pídale al administrador que active al menos una.'
+      : null;
+  return (
+    <SelectField label="Interés mensual" required hint={hint} error={error} disabled={rates.isPending} {...field}>
+      <option value="">{rates.isPending ? 'Cargando…' : 'Elija la tasa'}</option>
+      {options.map(({ id, rate }) => (
+        <option key={id} value={String(rate)}>
+          {formatPercent(rate)}
+        </option>
+      ))}
+    </SelectField>
   );
 }
 

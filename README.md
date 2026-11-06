@@ -58,7 +58,7 @@ src/
 │   └── ui/                  ← botones, campos, tarjetas, diálogos, listas…
 ├── features/                ← una carpeta por módulo de negocio
 │   ├── auth/  dashboard/  clients/  loans/  collections/
-│   ├── payments/  expenses/  reports/  users/
+│   ├── payments/  expenses/  reports/  users/  interest-rates/
 │   │   ├── *Page.jsx        ← pantallas
 │   │   ├── *.queries.js     ← lecturas y escrituras a la API (TanStack Query)
 │   │   └── *.js             ← reglas puras (validación, cálculos) con pruebas
