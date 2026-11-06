@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router';
 import { KeyRound, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { visibleNavigation } from './navigation.js';
+import logoInk from '../../assets/logo-ink.png';
 
 const linkClasses = ({ isActive }) =>
   `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -11,12 +12,9 @@ const linkClasses = ({ isActive }) =>
 
 function Brand() {
   return (
-    <div className="flex items-center gap-2.5">
-      <span className="grid size-9 place-items-center rounded-lg bg-brand-700 text-sm font-bold text-white">WG</span>
-      <span className="leading-tight">
-        <span className="block text-sm font-bold text-slate-900">Inversiones</span>
-        <span className="block text-xs text-slate-500">Wilson Gómez</span>
-      </span>
+    <div className="flex items-center gap-3">
+      <img src={logoInk} alt="Wilson Gómez" className="h-11 w-auto lg:h-14" />
+      <span className="border-l border-slate-200 pl-3 text-[11px] font-semibold uppercase leading-tight tracking-[0.18em] text-brand-800">Inversiones</span>
     </div>
   );
 }
