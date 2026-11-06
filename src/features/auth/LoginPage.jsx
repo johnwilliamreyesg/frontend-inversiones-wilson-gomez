@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, HandCoins, LockKeyhole, Mail, ShieldCheck, TrendingUp } from 'lucide-react';
+import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { Field, controlClasses } from '../../components/ui/Field.jsx';
@@ -15,11 +15,6 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Escriba su contraseña.'),
 });
 
-const HIGHLIGHTS = [
-  { icon: HandCoins, text: 'Cobros del día con un toque' },
-  { icon: TrendingUp, text: 'Créditos, pagos y reportes al día' },
-  { icon: ShieldCheck, text: 'Cada usuario ve solo lo que le corresponde' },
-];
 
 export function LoginPage() {
   const { status, notice, login } = useAuth();
@@ -119,26 +114,15 @@ function BrandPanel() {
       <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 -left-16 size-80 rounded-full bg-teal-300/15 blur-3xl" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
 
-      <p className="relative hidden text-xs font-semibold uppercase tracking-[0.25em] text-brand-100/80 lg:block">Inversiones</p>
+      <p className="relative text-center text-xs font-semibold uppercase tracking-[0.25em] text-brand-100/80 lg:text-left">Inversiones</p>
 
-      <div className="relative mx-auto max-w-md text-center lg:mx-0 lg:text-left">
+      <div className="relative mx-auto mt-4 max-w-md text-center lg:mx-0 lg:mt-0 lg:text-left">
         <img src={logoWhite} alt="Inversiones Wilson Gómez" className="mx-auto h-24 w-auto drop-shadow-sm sm:h-28 lg:mx-0 lg:h-36" />
-        <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-brand-100/90 lg:hidden">Inversiones · Créditos y cobranza</p>
         <h2 className="mt-10 hidden text-3xl font-semibold leading-tight tracking-tight lg:block">
           Créditos y cobranza,
           <br />
           en orden y al día.
         </h2>
-        <ul className="mt-8 hidden space-y-3 lg:block">
-          {HIGHLIGHTS.map(({ icon: Icon, text }) => (
-            <li key={text} className="flex items-center gap-3 text-brand-50/90">
-              <span className="grid size-9 place-items-center rounded-xl bg-white/10 ring-1 ring-inset ring-white/15">
-                <Icon className="size-[18px]" aria-hidden="true" />
-              </span>
-              {text}
-            </li>
-          ))}
-        </ul>
       </div>
 
       <p className="relative hidden text-xs text-brand-100/60 lg:block">Uso exclusivo del personal autorizado.</p>
