@@ -105,27 +105,29 @@ export function LoginPage() {
   );
 }
 
-/** Teal panel with the signature: a band on top on phones, the left half on desktop. */
+/** Matte black panel with "INVERSIONES" and the signature: a band on top on phones, the left half on desktop. */
 function BrandPanel() {
   return (
-    <aside className="relative overflow-hidden bg-gradient-to-br from-brand-700 via-brand-800 to-brand-900 px-6 pb-16 pt-12 text-white lg:flex lg:flex-col lg:justify-between lg:px-14 lg:py-12">
-      {/* Soft light shapes for depth. */}
-      <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-brand-500/30 blur-3xl" />
-      <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 -left-16 size-80 rounded-full bg-teal-300/15 blur-3xl" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:22px_22px]" />
+    <aside className="relative overflow-hidden bg-gradient-to-br from-neutral-900 via-neutral-950 to-black px-6 pb-16 pt-10 text-white lg:flex lg:flex-col lg:justify-between lg:px-14 lg:py-12">
+      {/* Very soft light and a faint dot texture, so the black does not look flat. */}
+      <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-white/[0.06] blur-3xl" />
+      <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 -left-16 size-80 rounded-full bg-brand-500/[0.07] blur-3xl" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:22px_22px]" />
 
-      <p className="relative text-center text-xs font-semibold uppercase tracking-[0.25em] text-brand-100/80 lg:text-left">Inversiones</p>
+      <span aria-hidden="true" className="hidden lg:block" />
 
-      <div className="relative mx-auto mt-4 max-w-md text-center lg:mx-0 lg:mt-0 lg:text-left">
-        <img src={logoWhite} alt="Inversiones Wilson Gómez" className="mx-auto h-24 w-auto drop-shadow-sm sm:h-28 lg:mx-0 lg:h-36" />
-        <h2 className="mt-10 hidden text-3xl font-semibold leading-tight tracking-tight lg:block">
+      <div className="relative mx-auto max-w-md text-center lg:mx-0 lg:text-left">
+        {/* The left padding balances the space the letter spacing leaves after the last letter, so it stays centered. */}
+        <p className="pl-[0.35em] text-3xl font-light uppercase tracking-[0.35em] text-white sm:text-4xl lg:pl-0 lg:text-5xl">Inversiones</p>
+        <img src={logoWhite} alt="Wilson Gómez" className="mx-auto mt-3 h-24 w-auto sm:h-28 lg:mx-0 lg:mt-5 lg:h-36" />
+        <h2 className="mt-12 hidden text-3xl font-semibold leading-tight tracking-tight text-neutral-200 lg:block">
           Créditos y cobranza,
           <br />
           en orden y al día.
         </h2>
       </div>
 
-      <p className="relative hidden text-xs text-brand-100/60 lg:block">Uso exclusivo del personal autorizado.</p>
+      <p className="relative hidden text-xs text-neutral-500 lg:block">Uso exclusivo del personal autorizado.</p>
     </aside>
   );
 }
