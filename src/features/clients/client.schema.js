@@ -28,17 +28,61 @@ export const toClientForm = (client) => ({
   ...Object.fromEntries(CLIENT_FIELDS.map((field) => [field, client[field] ?? emptyClient[field]])),
 });
 
-// Indicativos most likely for Wilson's clients; "Otro" lets the user type any.
-export const COUNTRY_CODES = [
-  { code: '+57', country: 'Colombia' },
-  { code: '+58', country: 'Venezuela' },
-  { code: '+593', country: 'Ecuador' },
-  { code: '+51', country: 'Perú' },
-  { code: '+507', country: 'Panamá' },
-  { code: '+52', country: 'México' },
-  { code: '+1', country: 'EE. UU.' },
-  { code: '+34', country: 'España' },
+// Phone country codes offered in the client form, grouped for the <select>.
+// Colombia first (the default); then all of America and the 10 largest
+// economies of Europe, alphabetically. Every country of the North American
+// plan (USA, Canada, Puerto Rico, Dominican Rep., Jamaica, Bahamas...) shares
+// +1: the area code is part of the number, so one option covers them all.
+export const COUNTRY_CODE_GROUPS = [
+  {
+    region: 'América',
+    countries: [
+      { code: '+57', country: 'Colombia' },
+      { code: '+54', country: 'Argentina' },
+      { code: '+297', country: 'Aruba' },
+      { code: '+501', country: 'Belice' },
+      { code: '+591', country: 'Bolivia' },
+      { code: '+55', country: 'Brasil' },
+      { code: '+56', country: 'Chile' },
+      { code: '+506', country: 'Costa Rica' },
+      { code: '+53', country: 'Cuba' },
+      { code: '+599', country: 'Curazao' },
+      { code: '+593', country: 'Ecuador' },
+      { code: '+1', country: 'EE. UU., Canadá y Caribe' },
+      { code: '+503', country: 'El Salvador' },
+      { code: '+502', country: 'Guatemala' },
+      { code: '+594', country: 'Guayana Francesa' },
+      { code: '+592', country: 'Guyana' },
+      { code: '+509', country: 'Haití' },
+      { code: '+504', country: 'Honduras' },
+      { code: '+52', country: 'México' },
+      { code: '+505', country: 'Nicaragua' },
+      { code: '+507', country: 'Panamá' },
+      { code: '+595', country: 'Paraguay' },
+      { code: '+51', country: 'Perú' },
+      { code: '+597', country: 'Surinam' },
+      { code: '+598', country: 'Uruguay' },
+      { code: '+58', country: 'Venezuela' },
+    ],
+  },
+  {
+    region: 'Europa',
+    countries: [
+      { code: '+49', country: 'Alemania' },
+      { code: '+32', country: 'Bélgica' },
+      { code: '+34', country: 'España' },
+      { code: '+33', country: 'Francia' },
+      { code: '+39', country: 'Italia' },
+      { code: '+31', country: 'Países Bajos' },
+      { code: '+48', country: 'Polonia' },
+      { code: '+44', country: 'Reino Unido' },
+      { code: '+46', country: 'Suecia' },
+      { code: '+41', country: 'Suiza' },
+    ],
+  },
 ];
+
+export const COUNTRY_CODES = COUNTRY_CODE_GROUPS.flatMap(({ countries }) => countries);
 
 /** What was typed in the search becomes the name, or the ID if it is a number. */
 export const initialValuesFromSearch = (search) => {

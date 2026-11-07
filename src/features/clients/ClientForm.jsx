@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSaveClient } from './clients.queries.js';
-import { CLIENT_FIELDS, COUNTRY_CODES, clientSchema, emptyClient, toClientForm } from './client.schema.js';
+import { CLIENT_FIELDS, COUNTRY_CODES, COUNTRY_CODE_GROUPS, clientSchema, emptyClient, toClientForm } from './client.schema.js';
 import { applyServerErrors } from '../../utils/form-errors.js';
 import { Button } from '../../components/ui/Button.jsx';
 import { SelectField, TextAreaField, TextField } from '../../components/ui/Field.jsx';
@@ -26,9 +26,7 @@ export function ClientForm({ client, initialValues, onSaved, onCancel, cancelTo 
   });
 
   // A code saved before that is not in the list still has to be selectable.
-  const codes = client && !COUNTRY_CODES.some(({ code }) => code === client.phoneCountryCode)
-    ? [...COUNTRY_CODES, { code: client.phoneCountryCode, country: 'Otro' }]
-    : COUNTRY_CODES;
+  const unlistedCode = client && !COUNTRY_CODES.some(({ code }) => code === client.phoneCountryCode) ? client.phoneCountryCode : null;
 
   const onSubmit = async (values) => {
     setGeneralError(null);
@@ -53,13 +51,18 @@ export function ClientForm({ client, initialValues, onSaved, onCancel, cancelTo 
       <ErrorAlert error={generalError} />
       <TextField label="Nombre completo" required autoComplete="off" autoFocus={!client} error={errors.fullName?.message} {...register('fullName')} />
       <TextField label="Cédula" required autoComplete="off" inputClassName="uppercase" error={errors.nationalId?.message} {...register('nationalId')} />
-      <div className="grid grid-cols-[8.5rem_1fr] gap-3">
+      <div className="grid grid-cols-[10rem_1fr] gap-3">
         <SelectField label="Indicativo" error={errors.phoneCountryCode?.message} {...register('phoneCountryCode')}>
-          {codes.map(({ code, country }) => (
-            <option key={code} value={code}>
-              {code} {country}
-            </option>
+          {COUNTRY_CODE_GROUPS.map(({ region, countries }) => (
+            <optgroup key={region} label={region}>
+              {countries.map(({ code, country }) => (
+                <option key={code} value={code}>
+                  {code} {country}
+                </option>
+              ))}
+            </optgroup>
           ))}
+          {unlistedCode && <option value={unlistedCode}>{unlistedCode} Otro</option>}
         </SelectField>
         <TextField label="Celular" required type="tel" inputMode="tel" autoComplete="off" placeholder="300 123 4567" error={errors.phoneNumber?.message} {...register('phoneNumber')} />
       </div>

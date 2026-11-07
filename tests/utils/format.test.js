@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { formatDate, formatMonth, formatPhone, parseMoneyInput, formatNumber, formatDays, phoneHref } from '../../src/utils/format.js';
-import { initialValuesFromSearch } from '../../src/features/clients/client.schema.js';
+import { COUNTRY_CODES, COUNTRY_CODE_GROUPS, initialValuesFromSearch } from '../../src/features/clients/client.schema.js';
 import { addDays, addMonthsToMonth, endOfMonth, startOfMonth, today } from '../../src/utils/dates.js';
 
 // Intl may use a narrow no-break space; compare without caring about which space.
@@ -61,5 +61,23 @@ describe('initialValuesFromSearch (new client from the loan form)', () => {
     assert.deepEqual(initialValuesFromSearch('1.023.456'), { nationalId: '1023456' });
     assert.deepEqual(initialValuesFromSearch('  María López '), { fullName: 'María López' });
     assert.deepEqual(initialValuesFromSearch(''), {});
+  });
+});
+
+describe('COUNTRY_CODES (client form)', () => {
+  it('Colombia first, no repeated code, all accepted by the backend (+ and 1-4 digits)', () => {
+    const codes = COUNTRY_CODES.map(({ code }) => code);
+    assert.equal(codes[0], '+57');
+    assert.equal(new Set(codes).size, codes.length);
+    assert.ok(codes.every((code) => /^[+][0-9]{1,4}$/.test(code)));
+  });
+
+  it('all of America and 10 countries of Europe, each group in alphabetical order', () => {
+    const [america, europe] = COUNTRY_CODE_GROUPS;
+    assert.equal(europe.countries.length, 10);
+    assert.ok(america.countries.length >= 25);
+    for (const names of [america.countries.slice(1), europe.countries].map((list) => list.map(({ country }) => country))) {
+      assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'es')));
+    }
   });
 });
