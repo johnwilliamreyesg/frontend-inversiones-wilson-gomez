@@ -13,7 +13,9 @@ import {
 } from '../loans/loan-amounts.js';
 import { isOpenEnded } from '../loans/loan-terms.js';
 import { applyServerErrors } from '../../utils/form-errors.js';
-import { today as getToday } from '../../utils/dates.js';
+import { addDays, today as getToday } from '../../utils/dates.js';
+import { paymentReceipt } from '../../utils/whatsapp.js';
+import { WhatsAppButton } from '../../components/ui/WhatsAppButton.jsx';
 import { formatDate, formatMoney } from '../../utils/format.js';
 import { PAYMENT_TYPE, RECALCULATION } from '../../utils/labels.js';
 import { Modal } from '../../components/ui/Modal.jsx';
@@ -35,7 +37,7 @@ const RECALCULATION_OPTIONS = [
   { value: 'reduce_term', title: RECALCULATION.reduce_term, description: 'Las cuotas quedan iguales y se termina de pagar antes.' },
 ];
 
-const FORM_FIELDS = ['amount', 'paymentMethod', 'paymentDate', 'notes', 'paymentType', 'recalculation'];
+const FORM_FIELDS = ['amount', 'paymentMethod', 'paymentDate', 'notes', 'paymentType', 'recalculation', 'rescheduleTo'];
 
 /** Whether a prepayment of this amount changes the installments still to come. */
 const needsRecalculation = (loan, values, today) =>
@@ -51,9 +53,13 @@ const paymentSchema = (loan, today) =>
       recalculation: z.enum(['reduce_installment', 'reduce_term']).nullable(),
       paymentMethod: z.enum(['cash', 'transfer']),
       paymentDate: z.string().min(1, 'Elija la fecha.').refine((date) => date <= today, 'La fecha no puede ser futura.'),
+      rescheduleTo: z.string(),
       notes: z.string().max(2000, 'Máximo 2000 caracteres.'),
     })
     .superRefine((values, ctx) => {
+      if (values.paymentType === 'interest_only' && values.rescheduleTo && values.rescheduleTo <= values.paymentDate) {
+        ctx.addIssue({ code: 'custom', path: ['rescheduleTo'], message: 'Debe ser posterior a la fecha del pago.' });
+      }
       if (needsRecalculation(loan, values, today) && !values.recalculation) {
         ctx.addIssue({ code: 'custom', path: ['recalculation'], message: 'Elija qué pasa con las cuotas que faltan.' });
       }
@@ -64,6 +70,7 @@ const toPaymentPayload = (loan, values, today) => ({
   amount: values.amount,
   paymentType: values.paymentType,
   ...(needsRecalculation(loan, values, today) && { recalculation: values.recalculation }),
+  ...(values.paymentType === 'interest_only' && values.rescheduleTo && { rescheduleTo: values.rescheduleTo }),
   paymentMethod: values.paymentMethod,
   paymentDate: values.paymentDate,
   notes: values.notes.trim() || null,
@@ -87,7 +94,7 @@ function PaymentDialogBody({ loanId, clientName, onClose }) {
   const { data: loan, error, isPending, refetch } = useLoan(loanId);
   const [receipt, setReceipt] = useState(null);
 
-  if (receipt) return <PaymentReceipt payment={receipt} onClose={onClose} />;
+  if (receipt) return <PaymentReceipt payment={receipt} loanId={loanId} onClose={onClose} />;
   if (isPending) return <LoadingState />;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
   return <PaymentForm loan={loan} clientName={clientName ?? loan.clientName} onClose={onClose} onRegistered={setReceipt} />;
@@ -106,7 +113,7 @@ function PaymentForm({ loan, clientName, onClose, onRegistered }) {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(paymentSchema(loan, today)),
-    defaultValues: { amount: null, paymentType: 'installment', recalculation: null, paymentMethod: 'cash', paymentDate: today, notes: '' },
+    defaultValues: { amount: null, paymentType: 'installment', recalculation: null, paymentMethod: 'cash', paymentDate: today, rescheduleTo: '', notes: '' },
   });
 
   const values = useWatch({ control });
@@ -169,6 +176,17 @@ function PaymentForm({ loan, clientName, onClose, onRegistered }) {
           render={({ field: recalculation }) => (
             <RecalculationChoice value={recalculation.value} onChange={recalculation.onChange} error={errors.recalculation?.message} />
           )}
+        />
+      )}
+
+      {values.paymentType === 'interest_only' && (
+        <TextField
+          label="Reagendar lo que queda de la cuota (opcional)"
+          type="date"
+          min={addDays(date, 1)}
+          hint="Si el cliente acordó pagar el resto otro día. Esa fecha saldrá en Cobros y en Próximos para recordárselo."
+          error={errors.rescheduleTo?.message}
+          {...field('rescheduleTo')}
         />
       )}
 
@@ -255,8 +273,10 @@ function RecalculationChoice({ value, onChange, error }) {
   );
 }
 
-/** What the payment covered, installment by installment. */
-function PaymentReceipt({ payment, onClose }) {
+/** What the payment covered, installment by installment, and the WhatsApp receipt. */
+function PaymentReceipt({ payment, loanId, onClose }) {
+  // Refetched after the payment: the receipt must say what is left NOW.
+  const { data: loan, isFetching } = useLoan(loanId);
   const allocatedPrincipal = payment.allocations.reduce((sum, allocation) => sum + Math.round(allocation.principalAmount * 100), 0);
   const extraPrincipal = (Math.round(payment.principalAmount * 100) - allocatedPrincipal) / 100;
   return (
@@ -293,8 +313,19 @@ function PaymentReceipt({ payment, onClose }) {
           {payment.recalculation && ` Cuotas recalculadas: ${RECALCULATION[payment.recalculation].toLowerCase()}. Revise las cuotas nuevas en el crédito.`}
         </Alert>
       )}
-      {payment.paymentType === 'interest_only' && <Alert tone="warning">El capital de las cuotas sigue pendiente.</Alert>}
-      <div className="flex justify-end">
+      {payment.rescheduled?.length > 0 ? (
+        <Alert tone="info">
+          {payment.rescheduled.map((change) => `El saldo de la cuota #${change.installmentNumber} quedó para el ${formatDate(change.newDueDate)}.`).join(' ')}
+        </Alert>
+      ) : (
+        payment.paymentType === 'interest_only' && <Alert tone="warning">El capital de las cuotas sigue pendiente.</Alert>
+      )}
+      <div className="flex flex-wrap justify-end gap-2">
+        {loan && !isFetching && (
+          <WhatsAppButton countryCode={loan.clientPhoneCountryCode} phoneNumber={loan.clientPhoneNumber} message={paymentReceipt({ payment, loan })}>
+            Enviar comprobante por WhatsApp
+          </WhatsAppButton>
+        )}
         <Button onClick={onClose}>Listo</Button>
       </div>
     </div>

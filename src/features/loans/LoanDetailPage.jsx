@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { Ban, HandCoins, Undo2 } from 'lucide-react';
+import { Ban, CalendarClock, HandCoins, Undo2 } from 'lucide-react';
 import { useCancelLoan, useLoan, useLoanPayments } from './loans.queries.js';
 import { LoanStatusBadge } from './LoanRows.jsx';
 import { describeTerms, isOpenEnded } from './loan-terms.js';
 import { PaymentDialog } from '../payments/PaymentDialog.jsx';
 import { VoidPaymentDialog } from '../payments/VoidPaymentDialog.jsx';
+import { RescheduleDialog } from './RescheduleDialog.jsx';
+import { WhatsAppButton } from '../../components/ui/WhatsAppButton.jsx';
+import { loanReminder } from '../../utils/whatsapp.js';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { Card, DescriptionList, StatCard } from '../../components/ui/Card.jsx';
@@ -24,6 +27,7 @@ export function LoanDetailPage() {
   const { data: loan, error, isPending, refetch } = useLoan(id);
   const [paying, setPaying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [rescheduling, setRescheduling] = useState(null);
   const cancel = useCancelLoan();
 
   if (isPending) return <LoadingState />;
@@ -35,6 +39,7 @@ export function LoanDetailPage() {
   const today = getToday();
   // summary.nextDueDate is the oldest unpaid one (often overdue); here: the next one not yet late.
   const upcoming = loan.installments.find((row) => ['pending', 'partially_paid'].includes(row.status) && row.dueDate >= today);
+  const reminder = isOpen ? loanReminder(loan, today) : null;
 
   return (
     <>
@@ -55,6 +60,11 @@ export function LoanDetailPage() {
               <Button icon={HandCoins} onClick={() => setPaying(true)}>
                 Registrar pago
               </Button>
+            )}
+            {reminder && (
+              <WhatsAppButton countryCode={loan.clientPhoneCountryCode} phoneNumber={loan.clientPhoneNumber} message={reminder}>
+                Recordar por WhatsApp
+              </WhatsAppButton>
             )}
             {loan.status === 'active' && can('loans.update') && (
               <Button variant="secondary" icon={Ban} onClick={() => setCancelling(true)}>
@@ -83,8 +93,9 @@ export function LoanDetailPage() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-5">
-          <InstallmentsCard loan={loan} openEnded={openEnded} />
+          <InstallmentsCard loan={loan} openEnded={openEnded} onReschedule={isOpen && can('loans.update') ? setRescheduling : null} />
           {can('payments.read') && <PaymentsCard loanId={loan.id} canVoid={can('payments.void')} />}
+          {loan.dueDateChanges?.length > 0 && <DueDateHistoryCard changes={loan.dueDateChanges} />}
         </div>
         <Card title="Condiciones">
           <DescriptionList
@@ -103,6 +114,7 @@ export function LoanDetailPage() {
         </Card>
       </div>
 
+      <RescheduleDialog loan={loan} installment={rescheduling} onClose={() => setRescheduling(null)} />
       <PaymentDialog
         open={paying}
         onClose={() => setPaying(false)}
@@ -134,7 +146,9 @@ function InstallmentStatus({ installment }) {
   return <Badge tone={tone}>{label}</Badge>;
 }
 
-function InstallmentsCard({ loan, openEnded }) {
+function InstallmentsCard({ loan, openEnded, onReschedule }) {
+  // Installments whose current date was set by hand.
+  const rescheduled = new Set((loan.dueDateChanges ?? []).map((change) => `${change.installmentId}:${change.newDueDate}`));
   return (
     <Card title="Cuotas" padded={false}>
       {openEnded && <p className="border-b border-slate-100 px-4 py-2 text-sm text-slate-500">Sin plazo fijo: cada mes se genera la cuota de interés sobre el saldo.</p>}
@@ -155,20 +169,59 @@ function InstallmentsCard({ loan, openEnded }) {
             {loan.installments.map((row) => (
               <tr key={row.id} className={row.status === 'cancelled' ? 'text-slate-400 line-through' : row.isOverdue ? 'bg-red-50/50' : ''}>
                 <td className="hidden px-4 py-2 text-slate-500 sm:table-cell">{row.installmentNumber}</td>
-                <td className="whitespace-nowrap py-2 pl-4 pr-2 sm:pl-2">{formatDate(row.dueDate)}</td>
+                <td className="whitespace-nowrap py-2 pl-4 pr-2 sm:pl-2">
+                  {formatDate(row.dueDate)}
+                  {rescheduled.has(`${row.id}:${row.dueDate}`) && row.status !== 'paid' && (
+                    <span className="block text-[11px] font-medium text-amber-700">Reagendada</span>
+                  )}
+                </td>
                 <td className="px-2 py-2 text-right" title={`Capital ${formatMoney(row.principalDue)} · Interés ${formatMoney(row.interestDue)}`}>
                   {formatMoney(row.amountDue)}
                 </td>
                 <td className="hidden px-2 py-2 text-right sm:table-cell">{formatMoney(row.amountPaid)}</td>
                 <td className="px-2 py-2 text-right font-medium">{formatMoney(row.amountRemaining)}</td>
                 <td className="py-2 pl-2 pr-4">
-                  <InstallmentStatus installment={row} />
+                  <span className="flex items-center gap-1">
+                    <InstallmentStatus installment={row} />
+                    {onReschedule && ['pending', 'partially_paid'].includes(row.status) && (
+                      <button
+                        type="button"
+                        onClick={() => onReschedule(row)}
+                        className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                        aria-label={`Cambiar fecha de la cuota ${row.installmentNumber}`}
+                        title="Cambiar fecha"
+                      >
+                        <CalendarClock className="size-4" />
+                      </button>
+                    )}
+                  </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+    </Card>
+  );
+}
+
+/** Every due date moved by hand: when, from which date to which, by whom and why. */
+function DueDateHistoryCard({ changes }) {
+  return (
+    <Card title="Cambios de fecha" padded={false}>
+      <ul className="divide-y divide-slate-100">
+        {changes.map((change) => (
+          <li key={change.id} className="px-4 py-3 text-sm">
+            <p className="font-medium text-slate-900">
+              Cuota #{change.installmentNumber}: {formatDate(change.previousDueDate)} → {formatDate(change.newDueDate)}
+            </p>
+            <p className="text-slate-500">
+              {formatDateTime(change.createdAt)} · {change.changedByName ?? '—'}
+              {change.reason && ` · ${change.reason}`}
+            </p>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

@@ -46,6 +46,14 @@ export const useCancelLoan = () => {
   return useMutation({ mutationFn: (id) => api.loans.cancel(id), onSuccess: () => invalidateMoneyData(queryClient) });
 };
 
+export const useRescheduleInstallment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ loanId, installmentId, changes }) => api.loans.rescheduleInstallment(loanId, installmentId, changes),
+    onSuccess: () => invalidateMoneyData(queryClient),
+  });
+};
+
 export const useRegisterPayment = () => {
   const queryClient = useQueryClient();
   return useMutation({
