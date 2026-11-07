@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UserRound, X } from 'lucide-react';
+import { UserPlus, UserRound, X } from 'lucide-react';
 import { useClients } from './clients.queries.js';
 import { SearchInput } from '../../components/ui/ListControls.jsx';
 import { Spinner } from '../../components/ui/Spinner.jsx';
@@ -9,9 +9,10 @@ const MIN_SEARCH_LENGTH = 2;
 
 /**
  * Pick a registered client by typing part of the name or ID.
- * `value` is the chosen client object (or null).
+ * `value` is the chosen client object (or null). With `onCreateNew(search)`
+ * it also offers registering a new client from what was typed.
  */
-export function ClientPicker({ label, value, onChange, error, excludeId, required }) {
+export function ClientPicker({ label, value, onChange, error, excludeId, required, onCreateNew }) {
   const [search, setSearch] = useState('');
   const enabled = search.trim().length >= MIN_SEARCH_LENGTH;
   const { data, isFetching } = useClients({ search, pageSize: 6 }, { enabled });
@@ -46,7 +47,9 @@ export function ClientPicker({ label, value, onChange, error, excludeId, require
                   <Spinner className="size-4" /> Buscando…
                 </div>
               ) : results.length === 0 ? (
-                <p className="px-3 py-3 text-sm text-slate-500">Ningún cliente coincide. Regístrelo primero en Clientes.</p>
+                <p className="px-3 py-3 text-sm text-slate-500">
+                  {onCreateNew ? 'Ningún cliente coincide.' : 'Ningún cliente coincide. Regístrelo primero en Clientes.'}
+                </p>
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {results.map((client) => (
@@ -65,6 +68,20 @@ export function ClientPicker({ label, value, onChange, error, excludeId, require
                     </li>
                   ))}
                 </ul>
+              )}
+              {onCreateNew && !(isFetching && !data) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onCreateNew(search);
+                    // The new client gets chosen: a later search starts clean.
+                    setSearch('');
+                  }}
+                  className="flex w-full items-center gap-2 border-t border-slate-100 px-3 py-2.5 text-left text-sm font-semibold text-brand-700 hover:bg-brand-50"
+                >
+                  <UserPlus className="size-4" aria-hidden="true" />
+                  Crear cliente nuevo
+                </button>
               )}
             </div>
           )}

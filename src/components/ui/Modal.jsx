@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Button } from './Button.jsx';
 import { ErrorAlert } from './Feedback.jsx';
@@ -6,6 +7,8 @@ import { ErrorAlert } from './Feedback.jsx';
 /**
  * Dialog built on the native <dialog> element: focus trap, Esc to close
  * and the backdrop come from the browser. On phones it opens as a bottom sheet.
+ * Rendered in <body> (portal) so a dialog with its own form never ends up
+ * inside the page's form in the HTML.
  */
 export function Modal({ open, onClose, title, children, footer, size = 'md' }) {
   const ref = useRef(null);
@@ -19,7 +22,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }) {
 
   const width = { sm: 'sm:max-w-sm', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl' }[size];
 
-  return (
+  return createPortal(
     <dialog
       ref={ref}
       onCancel={(event) => {
@@ -41,7 +44,8 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }) {
           {footer && <footer className="safe-bottom flex flex-wrap justify-end gap-2 border-t border-slate-100 px-4 py-3">{footer}</footer>}
         </div>
       )}
-    </dialog>
+    </dialog>,
+    document.body,
   );
 }
 

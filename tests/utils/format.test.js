@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { formatDate, formatMonth, formatPhone, parseMoneyInput, formatNumber, formatDays, phoneHref } from '../../src/utils/format.js';
+import { initialValuesFromSearch } from '../../src/features/clients/client.schema.js';
 import { addDays, addMonthsToMonth, endOfMonth, startOfMonth, today } from '../../src/utils/dates.js';
 
 // Intl may use a narrow no-break space; compare without caring about which space.
@@ -52,5 +53,13 @@ describe('dates', () => {
     assert.equal(addDays('2026-12-31', 1), '2027-01-01');
     assert.equal(addMonthsToMonth('2026-01', -1), '2025-12');
     assert.equal(addMonthsToMonth('2026-12', 1), '2027-01');
+  });
+});
+
+describe('initialValuesFromSearch (new client from the loan form)', () => {
+  it('a number goes to the ID, text to the name, nothing stays empty', () => {
+    assert.deepEqual(initialValuesFromSearch('1.023.456'), { nationalId: '1023456' });
+    assert.deepEqual(initialValuesFromSearch('  María López '), { fullName: 'María López' });
+    assert.deepEqual(initialValuesFromSearch(''), {});
   });
 });

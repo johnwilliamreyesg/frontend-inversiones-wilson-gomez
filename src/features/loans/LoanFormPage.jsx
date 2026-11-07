@@ -7,6 +7,8 @@ import { useInterestRates } from '../interest-rates/interest-rates.queries.js';
 import { LOAN_FIELDS, emptyLoanForm, loanFormSchema, termsSchema, toLoanPayload, toTermsPayload } from './loan-form.js';
 import { useClient } from '../clients/clients.queries.js';
 import { ClientPicker } from '../clients/ClientPicker.jsx';
+import { NewClientDialog } from '../clients/NewClientDialog.jsx';
+import { useAuth } from '../../auth/AuthProvider.jsx';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
 import { applyServerErrors } from '../../utils/form-errors.js';
 import { today as getToday } from '../../utils/dates.js';
@@ -40,6 +42,9 @@ function LoanForm({ presetClient }) {
   const [generalError, setGeneralError] = useState(null);
   const [client, setClient] = useState(presetClient);
   const [coDebtor, setCoDebtor] = useState(null);
+  // Search text when "Crear cliente nuevo" was pressed (null = dialog closed).
+  const [newClientSearch, setNewClientSearch] = useState(null);
+  const { can } = useAuth();
 
   const schema = useMemo(() => loanFormSchema({ today }), [today]);
   const {
@@ -81,12 +86,27 @@ function LoanForm({ presetClient }) {
 
   return (
     <>
+      <NewClientDialog
+        open={newClientSearch !== null}
+        search={newClientSearch}
+        onClose={() => setNewClientSearch(null)}
+        onCreated={pickParty('clientId', setClient)}
+      />
       <PageHeader title="Nuevo crédito" backTo={presetClient ? `/clients/${presetClient.id}` : '/loans'} />
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="min-w-0 space-y-5">
           <Card title="Personas">
             <div className="space-y-4">
-              <ClientPicker label="Cliente (deudor)" required value={client} onChange={pickParty('clientId', setClient)} excludeId={coDebtor?.id} error={errors.clientId?.message} />
+              <ClientPicker
+                label="Cliente (deudor)"
+                required
+                value={client}
+                onChange={pickParty('clientId', setClient)}
+                excludeId={coDebtor?.id}
+                error={errors.clientId?.message}
+                // Only the debtor can be created here; the co-debtor must already be a client.
+                onCreateNew={can('clients.create') ? setNewClientSearch : undefined}
+              />
               <ClientPicker label="Codeudor" required value={coDebtor} onChange={pickParty('coDebtorId', setCoDebtor)} excludeId={client?.id} error={errors.coDebtorId?.message} />
             </div>
           </Card>

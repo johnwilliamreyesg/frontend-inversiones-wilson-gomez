@@ -39,3 +39,10 @@ export const COUNTRY_CODES = [
   { code: '+1', country: 'EE. UU.' },
   { code: '+34', country: 'España' },
 ];
+
+/** What was typed in the search becomes the name, or the ID if it is a number. */
+export const initialValuesFromSearch = (search) => {
+  const text = String(search ?? '').trim();
+  if (!text) return {};
+  return /^[\d.\s-]+$/.test(text) ? { nationalId: text.replace(/\D/g, '') } : { fullName: text };
+};
