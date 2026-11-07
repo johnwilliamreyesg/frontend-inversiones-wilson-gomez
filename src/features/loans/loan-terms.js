@@ -11,3 +11,9 @@ export const describeTerms = (loan) => {
   const rate = `${formatPercent(loan.monthlyInterestRate)} mensual`;
   return isOpenEnded(loan) ? `${rate} · sin plazo fijo` : `${rate} · ${loan.numberOfInstallments} cuotas mensuales`;
 };
+
+/** Paid-off loans, most recently finished first. */
+export const paidLoans = (loans, { excludeId } = {}) =>
+  loans
+    .filter((loan) => loan.status === 'paid_off' && loan.id !== excludeId)
+    .sort((a, b) => String(b.paidOffDate ?? '').localeCompare(String(a.paidOffDate ?? '')));

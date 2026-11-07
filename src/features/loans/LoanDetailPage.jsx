@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { Ban, CalendarClock, HandCoins, Undo2 } from 'lucide-react';
 import { useCancelLoan, useLoan, useLoanPayments } from './loans.queries.js';
+import { useClientLoans } from '../clients/clients.queries.js';
+import { PaidLoansHistory } from './PaidLoansHistory.jsx';
 import { LoanStatusBadge } from './LoanRows.jsx';
-import { describeTerms, isOpenEnded } from './loan-terms.js';
+import { describeTerms, isOpenEnded, paidLoans } from './loan-terms.js';
 import { PaymentDialog } from '../payments/PaymentDialog.jsx';
 import { VoidPaymentDialog } from '../payments/VoidPaymentDialog.jsx';
 import { RescheduleDialog } from './RescheduleDialog.jsx';
@@ -98,7 +100,7 @@ export function LoanDetailPage() {
           {can('payments.read') && <PaymentsCard loanId={loan.id} canVoid={can('payments.void')} />}
           {loan.dueDateChanges?.length > 0 && <DueDateHistoryCard changes={loan.dueDateChanges} />}
         </div>
-        <Card title="Condiciones">
+        <Card title="Condiciones" collapsible className="self-start">
           <DescriptionList
             columns={1}
             items={[
@@ -113,6 +115,10 @@ export function LoanDetailPage() {
             ]}
           />
         </Card>
+      </div>
+
+      <div className="mt-5">
+        <ClientPaidLoans clientId={loan.clientId} clientName={loan.clientName} excludeId={loan.id} />
       </div>
 
       <RescheduleDialog loan={loan} installment={rescheduling} onClose={() => setRescheduling(null)} />
@@ -220,10 +226,18 @@ function InstallmentsCard({ loan, openEnded, onReschedule }) {
   );
 }
 
+/** The client's loans already paid off (other than this one): how they have paid before. */
+function ClientPaidLoans({ clientId, clientName, excludeId }) {
+  const { data } = useClientLoans(clientId);
+  if (!data) return null;
+  const firstName = clientName.split(' ')[0];
+  return <PaidLoansHistory loans={paidLoans(data.asDebtor, { excludeId })} title={`Créditos pagados de ${firstName}`} />;
+}
+
 /** Every due date moved by hand: when, from which date to which, by whom and why. */
 function DueDateHistoryCard({ changes }) {
   return (
-    <Card title="Cambios de fecha" padded={false}>
+    <Card title={`Cambios de fecha (${changes.length})`} padded={false} collapsible>
       <ul className="divide-y divide-slate-100">
         {changes.map((change) => (
           <li key={change.id} className="px-4 py-3 text-sm">
@@ -246,7 +260,7 @@ function PaymentsCard({ loanId, canVoid }) {
   const [voiding, setVoiding] = useState(null);
 
   return (
-    <Card title="Pagos" padded={false}>
+    <Card title={payments ? `Pagos (${payments.length})` : 'Pagos'} padded={false} collapsible>
       {isPending ? (
         <LoadingState />
       ) : error ? (

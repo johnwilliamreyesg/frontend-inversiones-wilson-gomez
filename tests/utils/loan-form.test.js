@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyLoanForm, loanFormSchema, parseDecimal, parseInteger, termsSchema, toLoanPayload, toTermsPayload } from '../../src/features/loans/loan-form.js';
 import { amountDueBy, paymentSuggestions } from '../../src/features/loans/loan-amounts.js';
-import { describeTerms } from '../../src/features/loans/loan-terms.js';
+import { describeTerms, paidLoans } from '../../src/features/loans/loan-terms.js';
 
 const TODAY = '2026-10-31';
 const biweekly = { ...emptyLoanForm(TODAY), principalAmount: 1_000_000, installmentAmount: 120_000, numberOfInstallments: '10' };
@@ -115,5 +115,18 @@ describe('payment suggestions', () => {
       { label: 'Vencido + próxima', amount: 100_000 },
       { label: 'Pagar todo', amount: 1_050_000 },
     ]);
+  });
+});
+
+describe('paidLoans (client history)', () => {
+  it('only paid-off loans, the most recently finished first, without the excluded one', () => {
+    const loans = [
+      { id: 1, status: 'paid_off', paidOffDate: '2026-03-01' },
+      { id: 2, status: 'active', paidOffDate: null },
+      { id: 3, status: 'paid_off', paidOffDate: '2026-09-15' },
+      { id: 4, status: 'paid_off', paidOffDate: '2026-06-10' },
+    ];
+    assert.deepEqual(paidLoans(loans).map(({ id }) => id), [3, 4, 1]);
+    assert.deepEqual(paidLoans(loans, { excludeId: 3 }).map(({ id }) => id), [4, 1]);
   });
 });

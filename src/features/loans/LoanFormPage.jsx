@@ -211,7 +211,7 @@ function RateSelect({ rates, error, ...field }) {
 function SchedulePreview({ terms, preview, frequency }) {
   const openEnded = frequency === 'monthly' && terms && !terms.numberOfInstallments;
   return (
-    <Card title="Proyección de cuotas" actions={preview.isFetching && <Spinner className="size-4 text-slate-400" />} padded={false}>
+    <Card title="Proyección de cuotas" collapsible actions={preview.isFetching && <Spinner className="size-4 text-slate-400" />} padded={false}>
       {!terms ? (
         <p className="px-4 py-8 text-center text-sm text-slate-500">Complete las condiciones para ver las cuotas.</p>
       ) : preview.error ? (

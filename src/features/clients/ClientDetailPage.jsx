@@ -4,6 +4,8 @@ import { Banknote, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
 import { useClient, useClientLoans, useDeleteClient } from './clients.queries.js';
 import { ClientPhotos } from './ClientPhotos.jsx';
 import { LoanRows } from '../loans/LoanRows.jsx';
+import { PaidLoansHistory } from '../loans/PaidLoansHistory.jsx';
+import { paidLoans } from '../loans/loan-terms.js';
 import { Can } from '../../auth/guards.jsx';
 import { useAuth } from '../../auth/AuthProvider.jsx';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
@@ -47,7 +49,7 @@ export function ClientDetailPage() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-5">
-          <Card title="Datos">
+          <Card title="Datos" collapsible>
             <DescriptionList
               items={[
                 { label: 'Celular', value: formatPhone(client.phoneCountryCode, client.phoneNumber) },
@@ -68,6 +70,12 @@ export function ClientDetailPage() {
           </Can>
         </div>
       </div>
+
+      {can('loans.read') && (
+        <div className="mt-5">
+          <ClientPaidHistory clientId={client.id} />
+        </div>
+      )}
 
       <ConfirmDialog
         open={confirmDelete}
@@ -90,6 +98,11 @@ export function ClientDetailPage() {
   );
 }
 
+function ClientPaidHistory({ clientId }) {
+  const { data } = useClientLoans(clientId);
+  return data ? <PaidLoansHistory loans={paidLoans(data.asDebtor)} /> : null;
+}
+
 function ClientLoans({ clientId }) {
   const { data, error, isPending, refetch } = useClientLoans(clientId);
   const newLoan = (
@@ -103,17 +116,19 @@ function ClientLoans({ clientId }) {
   if (isPending) return <Card title="Créditos"><LoadingState /></Card>;
   if (error) return <Card title="Créditos"><ErrorState error={error} onRetry={refetch} /></Card>;
 
+  // Paid-off ones go to the history at the end of the page.
+  const current = data.asDebtor.filter((loan) => loan.status !== 'paid_off');
   return (
     <>
-      <Card title={`Créditos como deudor (${data.asDebtor.length})`} actions={newLoan} padded={false}>
-        {data.asDebtor.length ? (
-          <LoanRows loans={data.asDebtor} show="client" />
+      <Card title={`Créditos como deudor (${current.length})`} actions={newLoan} padded={false} collapsible>
+        {current.length ? (
+          <LoanRows loans={current} show="client" />
         ) : (
-          <EmptyState icon={Banknote} title="Sin créditos" />
+          <EmptyState icon={Banknote} title="Sin créditos vigentes" />
         )}
       </Card>
       {data.asCoDebtor.length > 0 && (
-        <Card title={`Es codeudor en (${data.asCoDebtor.length})`} padded={false}>
+        <Card title={`Es codeudor en (${data.asCoDebtor.length})`} padded={false} collapsible>
           <LoanRows loans={data.asCoDebtor} show="coDebtor" />
         </Card>
       )}

@@ -97,7 +97,7 @@ function DailyReport({ month, today, onMonthChange }) {
       ) : (
         <>
           <Totals totals={data.totals} />
-          <Card title={`Detalle de ${formatMonth(month)}`} padded={false}>
+          <Card title={`Detalle de ${formatMonth(month)}`} padded={false} collapsible>
             <ReportTable
               firstColumn="Día"
               rows={[...data.rows].reverse().filter((row) => row.paymentsCount || row.disbursed || row.expenses)}
@@ -144,7 +144,7 @@ function MonthlyReport({ year, today, onYearChange }) {
       ) : (
         <>
           <Totals totals={data.totals} />
-          <Card title="Consolidado mensual" padded={false}>
+          <Card title="Consolidado mensual" padded={false} collapsible>
             <ReportTable
               firstColumn="Mes"
               rows={data.rows.filter((row) => row.month <= today.slice(0, 7) || row.installmentsDue)}

@@ -47,7 +47,7 @@ export function ClientPhotos({ clientId }) {
   const bySlot = new Map((photos ?? []).map((photo) => [photo.position, photo]));
 
   return (
-    <Card title="Fotos" actions={<span className="text-sm text-slate-500">{bySlot.size} de 3</span>}>
+    <Card title="Fotos" collapsible actions={<span className="text-sm text-slate-500">{bySlot.size} de 3</span>}>
       {error ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : (
