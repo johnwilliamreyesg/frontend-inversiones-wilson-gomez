@@ -41,7 +41,7 @@ export function ClientListPage() {
         </Card>
       ) : (
         <>
-          <Card padded={false}>
+          <Card title={`Clientes (${data.meta.total})`} padded={false} collapsible>
             <ul className="divide-y divide-slate-100">
               {data.data.map((client) => (
                 <li key={client.id}>

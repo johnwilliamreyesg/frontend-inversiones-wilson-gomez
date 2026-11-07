@@ -63,7 +63,7 @@ export function LoanListPage() {
         </Card>
       ) : (
         <>
-          <Card padded={false}>
+          <Card title={`Créditos (${data.meta.total})`} padded={false} collapsible>
             <LoanRows loans={data.data} />
           </Card>
           <Pagination meta={data.meta} onPageChange={(page) => setFilters({ page })} />

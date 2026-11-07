@@ -73,7 +73,7 @@ export function PaymentListPage() {
         </Card>
       ) : (
         <>
-          <Card padded={false}>
+          <Card title={`Pagos (${data.meta.total})`} padded={false} collapsible>
             <ul className="divide-y divide-slate-100">
               {data.data.map((payment) => (
                 <li key={payment.id} className={`flex items-start gap-3 px-4 py-3 ${payment.voidedAt ? 'bg-slate-50' : ''}`}>

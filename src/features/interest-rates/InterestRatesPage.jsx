@@ -58,7 +58,7 @@ export function InterestRatesPage() {
         ) : error ? (
           <ErrorState error={error} onRetry={refetch} />
         ) : (
-          <Card padded={false}>
+          <Card title={`Tasas (${rates.length})`} padded={false} collapsible>
             <ul className="divide-y divide-slate-100">
               {rates.map((interestRate) => (
                 <li key={interestRate.id} className="flex items-center gap-3 px-4 py-2.5">

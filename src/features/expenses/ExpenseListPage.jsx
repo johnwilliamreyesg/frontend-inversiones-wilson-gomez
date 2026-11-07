@@ -93,7 +93,7 @@ export function ExpenseListPage() {
         </Card>
       ) : (
         <>
-          <Card padded={false}>
+          <Card title={`Gastos (${data.meta.total})`} padded={false} collapsible>
             <ul className="divide-y divide-slate-100">
               {data.data.map((expense) => (
                 <li key={expense.id} className="flex items-center gap-3 px-4 py-3">

@@ -55,7 +55,7 @@ function UsersTab({ filters, setFilters }) {
         </Card>
       ) : (
         <>
-          <Card padded={false}>
+          <Card title={`Usuarios (${data.meta.total})`} padded={false} collapsible>
             <ul className="divide-y divide-slate-100">
               {data.data.map((user) => (
                 <li key={user.id} className="flex items-center gap-3 px-4 py-3">

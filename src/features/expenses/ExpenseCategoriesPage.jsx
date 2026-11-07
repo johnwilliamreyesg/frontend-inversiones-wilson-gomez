@@ -51,7 +51,7 @@ export function ExpenseCategoriesPage() {
         ) : error ? (
           <ErrorState error={error} onRetry={refetch} />
         ) : (
-          <Card padded={false}>
+          <Card title={`Categorías (${categories.length})`} padded={false} collapsible>
             <ul className="divide-y divide-slate-100">
               {categories.map((category) => (
                 <li key={category.id} className="flex items-center gap-3 px-4 py-2.5">
