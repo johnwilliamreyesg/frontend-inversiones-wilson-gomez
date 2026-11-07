@@ -63,7 +63,8 @@ export function LoanDetailPage() {
             )}
             {reminder && (
               <WhatsAppButton countryCode={loan.clientPhoneCountryCode} phoneNumber={loan.clientPhoneNumber} message={reminder}>
-                Recordar por WhatsApp
+                <span className="sm:hidden">Recordar</span>
+                <span className="hidden sm:inline">Recordar por WhatsApp</span>
               </WhatsAppButton>
             )}
             {loan.status === 'active' && can('loans.update') && (
@@ -91,7 +92,7 @@ export function LoanDetailPage() {
         />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-5">
           <InstallmentsCard loan={loan} openEnded={openEnded} onReschedule={isOpen && can('loans.update') ? setRescheduling : null} />
           {can('payments.read') && <PaymentsCard loanId={loan.id} canVoid={can('payments.void')} />}
@@ -99,7 +100,7 @@ export function LoanDetailPage() {
         </div>
         <Card title="Condiciones">
           <DescriptionList
-            className="sm:grid-cols-1"
+            columns={1}
             items={[
               { label: 'Frecuencia', value: FREQUENCY[loan.frequency] },
               { label: 'Condiciones', value: describeTerms(loan) },
@@ -153,37 +154,51 @@ function InstallmentsCard({ loan, openEnded, onReschedule }) {
     <Card title="Cuotas" padded={false}>
       {openEnded && <p className="border-b border-slate-100 px-4 py-2 text-sm text-slate-500">Sin plazo fijo: cada mes se genera la cuota de interés sobre el saldo.</p>}
       <div className="overflow-x-auto">
-        {/* On phones "#" and "Pagado" are hidden so the table fits without scrolling sideways. */}
+        {/* Phones: the status goes under the date and only "Falta" (what to collect) is shown, so it fits without scrolling sideways. */}
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="hidden px-4 py-2 font-medium sm:table-cell">#</th>
               <th className="py-2 pl-4 pr-2 font-medium sm:pl-2">Vence</th>
-              <th className="px-2 py-2 text-right font-medium">Cuota</th>
+              <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Cuota</th>
               <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Pagado</th>
               <th className="px-2 py-2 text-right font-medium">Falta</th>
-              <th className="py-2 pl-2 pr-4 font-medium">Estado</th>
+              <th className="hidden py-2 pl-2 font-medium sm:table-cell">Estado</th>
+              {onReschedule && <th className="w-10 py-2 pr-2"><span className="sr-only">Cambiar fecha</span></th>}
             </tr>
           </thead>
           <tbody className="tabular divide-y divide-slate-100">
             {loan.installments.map((row) => (
               <tr key={row.id} className={row.status === 'cancelled' ? 'text-slate-400 line-through' : row.isOverdue ? 'bg-red-50/50' : ''}>
                 <td className="hidden px-4 py-2 text-slate-500 sm:table-cell">{row.installmentNumber}</td>
-                <td className="whitespace-nowrap py-2 pl-4 pr-2 sm:pl-2">
-                  {formatDate(row.dueDate)}
+                <td className="py-2 pl-4 pr-2 sm:pl-2">
+                  <span className="whitespace-nowrap">
+                    <span className="text-slate-500 sm:hidden">#{row.installmentNumber} · </span>
+                    {formatDate(row.dueDate)}
+                  </span>
                   {rescheduled.has(`${row.id}:${row.dueDate}`) && row.status !== 'paid' && (
                     <span className="block text-[11px] font-medium text-amber-700">Reagendada</span>
                   )}
+                  <span className="mt-1 block sm:hidden">
+                    <InstallmentStatus installment={row} />
+                  </span>
                 </td>
-                <td className="px-2 py-2 text-right" title={`Capital ${formatMoney(row.principalDue)} · Interés ${formatMoney(row.interestDue)}`}>
+                <td className="hidden px-2 py-2 text-right sm:table-cell" title={`Capital ${formatMoney(row.principalDue)} · Interés ${formatMoney(row.interestDue)}`}>
                   {formatMoney(row.amountDue)}
                 </td>
                 <td className="hidden px-2 py-2 text-right sm:table-cell">{formatMoney(row.amountPaid)}</td>
-                <td className="px-2 py-2 text-right font-medium">{formatMoney(row.amountRemaining)}</td>
-                <td className="py-2 pl-2 pr-4">
-                  <span className="flex items-center gap-1">
-                    <InstallmentStatus installment={row} />
-                    {onReschedule && ['pending', 'partially_paid'].includes(row.status) && (
+                <td className="px-2 py-2 text-right font-medium">
+                  {formatMoney(row.amountRemaining)}
+                  {row.amountRemaining !== row.amountDue && row.status !== 'cancelled' && (
+                    <span className="block text-[11px] font-normal text-slate-500 sm:hidden">de {formatMoney(row.amountDue)}</span>
+                  )}
+                </td>
+                <td className="hidden py-2 pl-2 sm:table-cell">
+                  <InstallmentStatus installment={row} />
+                </td>
+                {onReschedule && (
+                  <td className="py-2 pr-2 text-right">
+                    {['pending', 'partially_paid'].includes(row.status) && (
                       <button
                         type="button"
                         onClick={() => onReschedule(row)}
@@ -194,8 +209,8 @@ function InstallmentsCard({ loan, openEnded, onReschedule }) {
                         <CalendarClock className="size-4" />
                       </button>
                     )}
-                  </span>
-                </td>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

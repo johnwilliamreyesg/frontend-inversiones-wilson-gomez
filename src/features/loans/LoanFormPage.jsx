@@ -118,7 +118,7 @@ function LoanForm({ presetClient }) {
                 name="frequency"
                 render={({ field }) => <SegmentedControl label="Frecuencia" options={FREQUENCY_OPTIONS} value={field.value} onChange={field.onChange} />}
               />
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Controller
                   control={control}
                   name="principalAmount"
@@ -136,7 +136,7 @@ function LoanForm({ presetClient }) {
               </div>
 
               {frequency === 'biweekly' ? (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Controller
                     control={control}
                     name="installmentAmount"
@@ -146,7 +146,7 @@ function LoanForm({ presetClient }) {
                 </div>
               ) : (
                 <>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <RateSelect rates={rates} error={errors.monthlyInterestRate?.message} {...register('monthlyInterestRate')} />
                     <TextField
                       label="Día de pago"
@@ -231,20 +231,29 @@ function SchedulePreview({ terms, preview, frequency }) {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-4 py-2 font-medium">#</th>
-                  <th className="px-2 py-2 font-medium">Vence</th>
-                  <th className="px-2 py-2 text-right font-medium">Capital</th>
-                  <th className="px-2 py-2 text-right font-medium">Interés</th>
+                  <th className="hidden px-4 py-2 font-medium sm:table-cell">#</th>
+                  <th className="py-2 pl-4 pr-2 font-medium sm:pl-2">Vence</th>
+                  <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Capital</th>
+                  <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">Interés</th>
                   <th className="px-4 py-2 text-right font-medium">Cuota</th>
                 </tr>
               </thead>
               <tbody className="tabular divide-y divide-slate-100">
                 {preview.data.installments.map((row) => (
                   <tr key={row.installmentNumber}>
-                    <td className="px-4 py-2 text-slate-500">{row.installmentNumber}</td>
-                    <td className="whitespace-nowrap px-2 py-2">{formatDate(row.dueDate)}</td>
-                    <td className="px-2 py-2 text-right">{formatMoney(row.principalDue)}</td>
-                    <td className="px-2 py-2 text-right">{formatMoney(row.interestDue)}</td>
+                    <td className="hidden px-4 py-2 text-slate-500 sm:table-cell">{row.installmentNumber}</td>
+                    <td className="py-2 pl-4 pr-2 sm:pl-2">
+                      <span className="whitespace-nowrap">
+                        <span className="text-slate-500 sm:hidden">#{row.installmentNumber} · </span>
+                        {formatDate(row.dueDate)}
+                      </span>
+                      {/* Phones: capital and interest under the date instead of in their own columns. */}
+                      <span className="block text-[11px] text-slate-500 sm:hidden">
+                        Capital {formatMoney(row.principalDue)} · Interés {formatMoney(row.interestDue)}
+                      </span>
+                    </td>
+                    <td className="hidden px-2 py-2 text-right sm:table-cell">{formatMoney(row.principalDue)}</td>
+                    <td className="hidden px-2 py-2 text-right sm:table-cell">{formatMoney(row.interestDue)}</td>
                     <td className="px-4 py-2 text-right font-semibold">{formatMoney(row.amountDue)}</td>
                   </tr>
                 ))}
@@ -254,9 +263,12 @@ function SchedulePreview({ terms, preview, frequency }) {
                   <tr>
                     <td className="px-4 py-2" colSpan={2}>
                       Total
+                      <span className="block text-[11px] font-normal text-slate-500 sm:hidden">
+                        Capital {formatMoney(preview.data.totals.principal)} · Interés {formatMoney(preview.data.totals.interest)}
+                      </span>
                     </td>
-                    <td className="px-2 py-2 text-right">{formatMoney(preview.data.totals.principal)}</td>
-                    <td className="px-2 py-2 text-right">{formatMoney(preview.data.totals.interest)}</td>
+                    <td className="hidden px-2 py-2 text-right sm:table-cell">{formatMoney(preview.data.totals.principal)}</td>
+                    <td className="hidden px-2 py-2 text-right sm:table-cell">{formatMoney(preview.data.totals.interest)}</td>
                     <td className="px-4 py-2 text-right">{formatMoney(preview.data.totals.amount)}</td>
                   </tr>
                 </tfoot>

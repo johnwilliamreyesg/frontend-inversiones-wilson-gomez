@@ -56,15 +56,14 @@ function UserBox({ user, onLogout }) {
 }
 
 /**
- * Desktop: fixed sidebar. Phone: top bar + bottom bar with the main
- * sections (thumb-reachable) and a "Más" drawer with everything else.
+ * Desktop: fixed sidebar. Phone: top bar whose menu button opens the same
+ * menu as a drawer.
  */
 export function AppLayout() {
   const { user, can, logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   const items = visibleNavigation(can);
-  const primaryItems = items.filter((item) => item.primary);
 
   // Close the drawer after navigating.
   useEffect(() => setDrawerOpen(false), [location.pathname]);
@@ -107,35 +106,10 @@ export function AppLayout() {
         </div>
       )}
 
-      <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:pb-10 lg:pt-8">
+      <main className="mx-auto w-full max-w-6xl px-4 pb-10 pt-5 sm:px-6 lg:pt-8">
         <Outlet />
       </main>
 
-      {/* Phone bottom bar */}
-      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 bg-neutral-950 lg:hidden" aria-label="Accesos rápidos">
-        <ul className="grid" style={{ gridTemplateColumns: `repeat(${primaryItems.length + 1}, minmax(0, 1fr))` }}>
-          {primaryItems.map(({ to, label, icon: Icon, end }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                end={end}
-                className={({ isActive }) =>
-                  `flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${isActive ? 'text-brand-500' : 'text-neutral-400'}`
-                }
-              >
-                <Icon className="size-6" aria-hidden="true" />
-                {label}
-              </NavLink>
-            </li>
-          ))}
-          <li>
-            <button type="button" onClick={() => setDrawerOpen(true)} className="flex w-full flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-neutral-400">
-              <Menu className="size-6" aria-hidden="true" />
-              Más
-            </button>
-          </li>
-        </ul>
-      </nav>
     </div>
   );
 }

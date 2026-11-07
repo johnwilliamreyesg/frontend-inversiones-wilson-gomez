@@ -45,7 +45,7 @@ export function AccountPage() {
   return (
     <>
       <PageHeader title="Mi cuenta" />
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card title="Mis datos">
           <DescriptionList
             items={[

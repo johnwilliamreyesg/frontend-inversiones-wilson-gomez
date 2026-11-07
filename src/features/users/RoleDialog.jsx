@@ -72,13 +72,13 @@ function RoleForm({ role, onClose }) {
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
       <ErrorAlert error={save.error && !nameError ? save.error : null} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TextField label="Nombre" required maxLength={50} value={name} onChange={(event) => setName(event.target.value)} error={nameError} placeholder="Ej.: Cobrador" />
         <TextField label="Descripción" maxLength={255} value={description} onChange={(event) => setDescription(event.target.value)} />
       </div>
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-slate-700">Permisos</legend>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {groupByModule(permissions).map(([module, items]) => (
             <div key={module} className="rounded-lg p-3 ring-1 ring-slate-200">
               <p className="mb-2 text-sm font-semibold text-slate-800">{MODULE_LABELS[module] ?? module}</p>

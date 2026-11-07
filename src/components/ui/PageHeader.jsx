@@ -15,7 +15,8 @@ export function PageHeader({ title, subtitle, backTo, actions }) {
           {subtitle && <div className="mt-0.5 text-sm text-slate-500">{subtitle}</div>}
         </div>
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {/* Phones: the actions get their own row and share its width. */}
+      {actions && <div className="flex w-full flex-wrap gap-2 sm:w-auto [&>*]:grow sm:[&>*]:grow-0">{actions}</div>}
     </div>
   );
 }

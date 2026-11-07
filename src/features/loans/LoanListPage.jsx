@@ -41,7 +41,7 @@ export function LoanListPage() {
       />
       <div className="mb-4 space-y-3">
         <SegmentedControl label="Estado" options={STATUS_OPTIONS} value={filters.status} onChange={(status) => setFilters({ status })} />
-        <div className="grid gap-3 sm:grid-cols-[1fr_12rem]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_12rem]">
           <SearchInput value={filters.search} onChange={(search) => setFilters({ search })} placeholder="Buscar por cliente o cédula" />
           <SelectField aria-label="Frecuencia" value={filters.frequency} onChange={(event) => setFilters({ frequency: event.target.value })}>
             <option value="">Todas las frecuencias</option>

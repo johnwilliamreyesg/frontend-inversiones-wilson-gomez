@@ -76,7 +76,7 @@ function TodayView({ filters, setFilters, today }) {
         </div>
       )}
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_auto_11rem] sm:items-center">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_11rem] sm:items-center">
         <SearchInput value={filters.search} onChange={(search) => setFilters({ search })} placeholder="Buscar por nombre, cédula o dirección" />
         <SegmentedControl label="Vista" options={VIEW_OPTIONS} value={filters.view} onChange={(view) => setFilters({ view })} />
         <TextField type="date" aria-label="Fecha" max={today} value={filters.date} onChange={(event) => setFilters({ date: event.target.value || today })} />
@@ -93,7 +93,7 @@ function TodayView({ filters, setFilters, today }) {
           </EmptyState>
         </Card>
       ) : (
-        <ul className="grid gap-3 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {data.data.map((row) => (
             <li key={row.loanId}>
               <CollectionCard row={row} canPay={can('payments.create')} onPay={() => setPaying(row)} />
@@ -200,7 +200,7 @@ function UpcomingView({ days, onDaysChange }) {
           </EmptyState>
         </Card>
       ) : (
-        <ul className="grid gap-3 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {rows.map((row) => (
             <li key={row.installmentId}>
               <UpcomingCard row={row} />

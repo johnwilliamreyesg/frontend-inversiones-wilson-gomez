@@ -107,7 +107,7 @@ function RolesTab() {
           Nuevo rol
         </Button>
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {roles.map((role) => {
           const isAdmin = role.name === ADMIN_ROLE_NAME;
           return (

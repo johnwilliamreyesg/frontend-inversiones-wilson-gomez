@@ -186,7 +186,49 @@ function EffectivenessBadge({ value, month, currentMonth }) {
 function ReportTable({ firstColumn, rows, rowKey, rowLabel, withEffectiveness = false, currentMonth, emptyText }) {
   if (!rows.length) return <p className="px-4 py-8 text-center text-sm text-slate-500">{emptyText}</p>;
   return (
-    <div className="overflow-x-auto">
+    <>
+      <ReportCards rows={rows} rowKey={rowKey} rowLabel={rowLabel} withEffectiveness={withEffectiveness} currentMonth={currentMonth} />
+      <ReportGrid firstColumn={firstColumn} rows={rows} rowKey={rowKey} rowLabel={rowLabel} withEffectiveness={withEffectiveness} currentMonth={currentMonth} />
+    </>
+  );
+}
+
+/** Phones: one card per day/month with every value, instead of a wide table. */
+function ReportCards({ rows, rowKey, rowLabel, withEffectiveness, currentMonth }) {
+  return (
+    <ul className="divide-y divide-slate-100 sm:hidden">
+      {rows.map((row) => {
+        const empty = MONEY_COLUMNS.every(({ key }) => !row[key]);
+        return (
+          <li key={rowKey(row)} className="px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-semibold text-slate-900">{rowLabel(row)}</p>
+              {withEffectiveness && <EffectivenessBadge value={row.effectiveness} month={row.month} currentMonth={currentMonth} />}
+            </div>
+            {empty ? (
+              <p className="mt-0.5 text-sm text-slate-400">Sin movimiento</p>
+            ) : (
+              <dl className="tabular mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                {MONEY_COLUMNS.map(({ key, label }) => (
+                  <div key={key} className="flex justify-between gap-2">
+                    <dt className="text-slate-500">{label}</dt>
+                    <dd className={`font-medium ${key === 'netProfit' && row[key] < 0 ? 'text-red-700' : row[key] ? 'text-slate-900' : 'text-slate-300'}`}>
+                      {formatMoney(row[key] ?? 0)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function ReportGrid({ firstColumn, rows, rowKey, rowLabel, withEffectiveness, currentMonth }) {
+  return (
+    <div className="hidden overflow-x-auto sm:block">
       <table className="w-full min-w-[40rem] text-sm">
         <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
           <tr>

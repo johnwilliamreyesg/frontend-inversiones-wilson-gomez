@@ -48,7 +48,7 @@ export function PaymentListPage() {
           <option value="transfer">Transferencia</option>
         </SelectField>
         <CheckboxField
-          className="self-center sm:pb-2.5"
+          className="self-end pb-3 sm:pb-2.5"
           label="Mostrar anulados"
           checked={filters.includeVoided === 'true'}
           onChange={(event) => setFilters({ includeVoided: event.target.checked ? 'true' : '' })}
@@ -56,10 +56,10 @@ export function PaymentListPage() {
       </div>
 
       {totals && (
-        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
           <StatCard label="Total recibido" value={formatMoney(totals.amount)} hint={`${totals.count} pago(s)`} tone="brand" />
           <StatCard label="Interés (ganancia)" value={formatMoney(totals.interest)} tone="success" />
-          <StatCard label="Capital recogido" value={formatMoney(totals.principal)} />
+          <StatCard label="Capital recogido" value={formatMoney(totals.principal)} className="col-span-2 lg:col-span-1" />
         </div>
       )}
 

@@ -78,7 +78,7 @@ export function ExpenseListPage() {
       </div>
 
       {data && (
-        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Total en estas fechas" value={formatMoney(data.meta.totalAmount)} hint={`${data.meta.total} gasto(s)`} tone="danger" />
         </div>
       )}
