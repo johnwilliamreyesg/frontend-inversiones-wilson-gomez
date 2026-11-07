@@ -3,16 +3,23 @@ import { PAYMENT_METHOD } from './labels.js';
 
 // WhatsApp messages to clients. The app only prepares the text and opens the
 // chat (wa.me); the admin reviews it and presses Send. Pure functions, tested.
+// WhatsApp formatting: *bold*, _italic_, one fact per line.
 
 const BUSINESS = 'Inversiones Wilson Gómez';
 const DEFAULT_COUNTRY_CODE = '+57';
 const OPEN = new Set(['pending', 'partially_paid']);
+const NBSP = ' ';
 
 const digits = (text) => String(text ?? '').replace(/\D/g, '');
-// formatMoney uses a non-breaking space; plain text is safer in a chat.
-const money = (amount) => formatMoney(amount).replace(/\s/g, ' ');
-const firstName = (fullName) => String(fullName ?? '').trim().split(/\s+/)[0] || '';
-const greeting = (clientName) => `Hola ${firstName(clientName)}, le saluda ${BUSINESS}.`;
+// Non-breaking space after "$": the amount never splits across two lines.
+const money = (amount) => formatMoney(amount).replace(/\s/g, NBSP);
+const bold = (text) => `*${text}*`;
+const capitalize = (word) => word.charAt(0).toLocaleUpperCase('es') + word.slice(1).toLocaleLowerCase('es');
+const firstName = (fullName) => capitalize(String(fullName ?? '').trim().split(/\s+/)[0] || '');
+
+/** Greeting, body lines, closing and signature, separated like a chat message. */
+const message = ({ clientName, intro, facts, closing }) =>
+  [`Hola ${firstName(clientName)} 👋`, '', intro, '', ...facts, '', closing, `_${BUSINESS}_`].join('\n');
 
 /** "https://wa.me/573001234567?text=..." — opens the chat with the text ready. */
 export const whatsappUrl = (countryCode, phoneNumber, text) =>
@@ -35,24 +42,39 @@ const range = (first, last) => (first === last ? [first] : Array.from({ length: 
  * { clientName, amountDue, installmentsDue, firstInstallmentNumber, lastInstallmentNumber, oldestDueDate, isOverdue }
  */
 export const collectionReminder = (row) => {
-  const numbers = installmentList(range(row.firstInstallmentNumber, row.lastInstallmentNumber));
   const plural = row.installmentsDue > 1;
-  const body = row.isOverdue
-    ? `Le recordamos que ${plural ? `las cuotas ${numbers} están vencidas` : `la cuota ${numbers} está vencida`} desde el ${formatDate(row.oldestDueDate)}. Valor pendiente: ${money(row.amountDue)}. Por favor comuníquese con nosotros para ponerse al día.`
-    : `Le recordamos que hoy vence ${plural ? `sus cuotas ${numbers}` : `su cuota ${numbers}`} por ${money(row.amountDue)}.`;
-  return `${greeting(row.clientName)} ${body} ¡Gracias!`;
+  const installments = bold(`${plural ? 'Cuotas' : 'Cuota'} ${installmentList(range(row.firstInstallmentNumber, row.lastInstallmentNumber))}`);
+  if (row.isOverdue) {
+    return message({
+      clientName: row.clientName,
+      intro: 'Le recordamos que su crédito tiene un saldo vencido:',
+      facts: [`📌 ${installments}`, `⏰ Vencida desde: ${bold(formatDate(row.oldestDueDate))}`, `💵 Valor pendiente: ${bold(money(row.amountDue))}`],
+      closing: 'Por favor comuníquese con nosotros para ponerse al día.',
+    });
+  }
+  return message({
+    clientName: row.clientName,
+    intro: `Le recordamos que hoy vence ${plural ? 'el pago de sus cuotas' : 'el pago de su cuota'}:`,
+    facts: [`📌 ${installments}`, `📅 Vence: ${bold(`hoy, ${formatDate(row.oldestDueDate)}`)}`, `💵 Valor: ${bold(money(row.amountDue))}`],
+    closing: 'Gracias por su puntualidad.',
+  });
 };
 
 /**
  * An installment not due yet (the "Próximos" list or the loan detail).
  * { clientName, installmentNumber, dueDate, amountDue, rescheduled }
  */
-export const upcomingReminder = (row) => {
-  const body = row.rescheduled
-    ? `Le recordamos el compromiso de pago acordado: su cuota #${row.installmentNumber} por ${money(row.amountDue)} quedó para el ${formatDate(row.dueDate)}.`
-    : `Le recordamos que su cuota #${row.installmentNumber} por ${money(row.amountDue)} vence el ${formatDate(row.dueDate)}.`;
-  return `${greeting(row.clientName)} ${body} ¡Gracias!`;
-};
+export const upcomingReminder = (row) =>
+  message({
+    clientName: row.clientName,
+    intro: row.rescheduled ? 'Le recordamos el compromiso de pago acordado:' : 'Le recordamos el pago de su cuota:',
+    facts: [
+      `📌 ${bold(`Cuota #${row.installmentNumber}`)}`,
+      `📅 ${row.rescheduled ? 'Nueva fecha' : 'Vence'}: ${bold(formatDate(row.dueDate))}`,
+      `💵 Valor: ${bold(money(row.amountDue))}`,
+    ],
+    closing: 'Gracias por su puntualidad.',
+  });
 
 /** From the loan detail: what is overdue, or else the next installment. Null when nothing is pending. */
 export const loanReminder = (loan, today) => {
@@ -82,38 +104,46 @@ export const loanReminder = (loan, today) => {
  */
 export const paymentReceipt = ({ payment, loan }) => {
   const lines = [
-    `Hola ${firstName(loan.clientName)}, ${BUSINESS} le confirma el pago recibido el ${formatDate(payment.paymentDate)} por ${money(payment.amount)} (${(PAYMENT_METHOD[payment.paymentMethod] ?? '').toLowerCase()}).`,
+    `Hola ${firstName(loan.clientName)} 👋`,
+    '',
+    `✅ ${bold('Pago recibido')}`,
+    '',
+    `💵 Valor: ${bold(money(payment.amount))}`,
+    `📅 Fecha: ${formatDate(payment.paymentDate)}`,
+    `💳 Medio: ${PAYMENT_METHOD[payment.paymentMethod] ?? payment.paymentMethod}`,
   ];
 
-  const applied = payment.allocations.map(
-    (a) => `cuota #${a.installmentNumber} (${money(a.principalAmount + a.interestAmount)})`,
-  );
-  if (applied.length > 0) {
-    lines.push(`${payment.paymentType === 'interest_only' ? 'Abono de intereses a' : 'Se aplicó a'}: ${applied.join(', ')}.`);
-  }
+  const applied = payment.allocations.map((a) => {
+    const onlyInterest = a.principalAmount === 0 && a.interestAmount > 0;
+    return `• Cuota #${a.installmentNumber}: ${money(a.principalAmount + a.interestAmount)}${onlyInterest ? ' (intereses)' : ''}`;
+  });
   const allocatedPrincipal = payment.allocations.reduce((sum, a) => sum + Math.round(a.principalAmount * 100), 0);
   const extraPrincipal = (Math.round(payment.principalAmount * 100) - allocatedPrincipal) / 100;
-  if (extraPrincipal > 0) lines.push(`Abono a capital: ${money(extraPrincipal)}.`);
-  for (const change of payment.rescheduled ?? []) {
-    lines.push(`El saldo de la cuota #${change.installmentNumber} quedó para el ${formatDate(change.newDueDate)}.`);
-  }
+  if (extraPrincipal > 0) applied.push(`• Abono a capital: ${money(extraPrincipal)}`);
+  if (applied.length > 0) lines.push('', bold('Se aplicó a:'), ...applied);
+
+  const rescheduled = (payment.rescheduled ?? []).map(
+    (change) => `🔁 El saldo de la cuota #${change.installmentNumber} quedó para el ${bold(formatDate(change.newDueDate))}`,
+  );
+  if (rescheduled.length > 0) lines.push('', ...rescheduled);
 
   const counted = loan.installments.filter((row) => row.status !== 'cancelled');
   const open = counted.filter((row) => OPEN.has(row.status));
   const openEnded = loan.frequency === 'monthly' && !loan.numberOfInstallments;
+  lines.push('');
   if (open.length === 0 && loan.principalBalance === 0) {
-    lines.push('¡Su crédito quedó pagado por completo!');
+    lines.push(`🎉 ${bold('¡Su crédito quedó pagado por completo!')}`);
   } else if (openEnded) {
-    lines.push(`Saldo de capital: ${money(loan.principalBalance)}.`);
+    lines.push(`📊 Saldo de capital: ${bold(money(loan.principalBalance))}`);
   } else {
-    const paid = counted.length - open.length;
-    lines.push(
-      `Cuotas pagadas: ${paid} de ${counted.length}. ${open.length === 1 ? 'Le queda 1 cuota' : `Le quedan ${open.length} cuotas`}: ${installmentList(open.map((row) => row.installmentNumber))}.`,
-    );
+    lines.push(`📊 Cuotas pagadas: ${bold(`${counted.length - open.length} de ${counted.length}`)}`);
+    lines.push(`⏳ Pendientes: ${installmentList(open.map((row) => row.installmentNumber))}`);
   }
   const next = open[0];
-  if (next) lines.push(`Próxima cuota: #${next.installmentNumber} el ${formatDate(next.dueDate)} por ${money(next.amountRemaining)}.`);
+  if (next) {
+    lines.push(`➡️ Próxima: cuota #${next.installmentNumber} el ${bold(formatDate(next.dueDate))} por ${bold(money(next.amountRemaining))}`);
+  }
 
-  lines.push('¡Gracias por su pago!');
+  lines.push('', '¡Gracias por su pago!', `_${BUSINESS}_`);
   return lines.join('\n');
 };

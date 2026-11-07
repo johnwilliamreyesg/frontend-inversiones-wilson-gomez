@@ -2,7 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { collectionReminder, installmentList, loanReminder, paymentReceipt, upcomingReminder, whatsappUrl } from '../../src/utils/whatsapp.js';
 
-const plain = (text) => text.replace(/\s/g, ' ');
+// Non-breaking spaces become plain ones so the expectations stay readable.
+const plain = (text) => text.replace(/ /g, ' ');
 
 const row = (id, installmentNumber, dueDate, amountDue, status = 'pending', amountPaid = 0) => ({
   id,
@@ -32,6 +33,36 @@ describe('installmentList', () => {
 });
 
 describe('reminders', () => {
+  const upcoming = { clientName: 'JOHN REYES', installmentNumber: 2, dueDate: '2026-12-06', amountDue: 354_438 };
+
+  it('one fact per line, bold values, greeting and signature', () => {
+    assert.equal(
+      plain(upcomingReminder(upcoming)),
+      [
+        'Hola John 👋',
+        '',
+        'Le recordamos el pago de su cuota:',
+        '',
+        '📌 *Cuota #2*',
+        '📅 Vence: *6 dic 2026*',
+        '💵 Valor: *$ 354.438*',
+        '',
+        'Gracias por su puntualidad.',
+        '_Inversiones Wilson Gómez_',
+      ].join('\n'),
+    );
+  });
+
+  it('the amount never splits: "$" and the number are joined by a non-breaking space', () => {
+    assert.match(upcomingReminder(upcoming), /\$ 354\.438/);
+  });
+
+  it('a rescheduled one reads as the agreed commitment with its new date', () => {
+    const text = plain(upcomingReminder({ ...upcoming, rescheduled: true }));
+    assert.match(text, /compromiso de pago acordado:/);
+    assert.match(text, /📅 Nueva fecha: \*6 dic 2026\*/);
+  });
+
   it('overdue installments, from the collections list', () => {
     const text = plain(
       collectionReminder({
@@ -44,19 +75,15 @@ describe('reminders', () => {
         isOverdue: true,
       }),
     );
-    assert.match(text, /^Hola Ana, le saluda Inversiones Wilson Gómez\./);
-    assert.match(text, /las cuotas #2 a #3 están vencidas desde el 28 oct 2026\. Valor pendiente: \$ 720\.000\./);
+    assert.match(text, /^Hola Ana 👋/);
+    assert.match(text, /saldo vencido:\n\n📌 \*Cuotas #2 a #3\*\n⏰ Vencida desde: \*28 oct 2026\*\n💵 Valor pendiente: \*\$ 720\.000\*/);
+    assert.match(text, /ponerse al día\.\n_Inversiones Wilson Gómez_$/);
   });
 
   it('due today is not "vencida"', () => {
     const text = plain(collectionReminder({ clientName: 'Ana', amountDue: 360_000, installmentsDue: 1, firstInstallmentNumber: 3, lastInstallmentNumber: 3, oldestDueDate: '2026-11-06', isOverdue: false }));
-    assert.match(text, /hoy vence su cuota #3 por \$ 360\.000\./);
-  });
-
-  it('upcoming, and a rescheduled one reads as the agreed commitment', () => {
-    const base = { clientName: 'Ana', installmentNumber: 4, dueDate: '2026-11-16', amountDue: 300_000 };
-    assert.match(plain(upcomingReminder(base)), /su cuota #4 por \$ 300\.000 vence el 16 nov 2026\./);
-    assert.match(plain(upcomingReminder({ ...base, rescheduled: true })), /compromiso de pago acordado: su cuota #4 .* quedó para el 16 nov 2026\./);
+    assert.match(text, /hoy vence el pago de su cuota:\n\n📌 \*Cuota #3\*\n📅 Vence: \*hoy, 6 nov 2026\*/);
+    assert.doesNotMatch(text, /vencid/i);
   });
 
   it('from the loan detail: overdue first, else the next one; nothing pending -> null', () => {
@@ -65,8 +92,8 @@ describe('reminders', () => {
       installments: [row(1, 1, '2026-10-01', 360_000, 'paid'), row(2, 2, '2026-11-01', 360_000), row(3, 3, '2026-12-01', 360_000)],
       dueDateChanges: [],
     };
-    assert.match(plain(loanReminder(loan, '2026-11-06')), /la cuota #2 está vencida desde el 1 nov 2026/);
-    assert.match(plain(loanReminder(loan, '2026-10-20')), /su cuota #2 por \$ 360\.000 vence el 1 nov 2026/);
+    assert.match(plain(loanReminder(loan, '2026-11-06')), /📌 \*Cuota #2\*\n⏰ Vencida desde: \*1 nov 2026\*/);
+    assert.match(plain(loanReminder(loan, '2026-10-20')), /📌 \*Cuota #2\*\n📅 Vence: \*1 nov 2026\*/);
     assert.equal(loanReminder({ ...loan, installments: [row(1, 1, '2026-10-01', 1, 'paid')] }, '2026-11-06'), null);
   });
 });
@@ -97,11 +124,29 @@ describe('paymentReceipt', () => {
         { installmentNumber: 2, principalAmount: 300_000, interestAmount: 60_000 },
       ],
     };
-    const text = plain(paymentReceipt({ payment, loan }));
-    assert.match(text, /^Hola Ana, Inversiones Wilson Gómez le confirma el pago recibido el 6 nov 2026 por \$ 720\.000 \(efectivo\)\./);
-    assert.match(text, /Se aplicó a: cuota #1 \(\$ 360\.000\), cuota #2 \(\$ 360\.000\)\./);
-    assert.match(text, /Cuotas pagadas: 2 de 4\. Le quedan 2 cuotas: #3 a #4\./);
-    assert.match(text, /Próxima cuota: #3 el 1 dic 2026 por \$ 360\.000\./);
+    assert.equal(
+      plain(paymentReceipt({ payment, loan })),
+      [
+        'Hola Ana 👋',
+        '',
+        '✅ *Pago recibido*',
+        '',
+        '💵 Valor: *$ 720.000*',
+        '📅 Fecha: 6 nov 2026',
+        '💳 Medio: Efectivo',
+        '',
+        '*Se aplicó a:*',
+        '• Cuota #1: $ 360.000',
+        '• Cuota #2: $ 360.000',
+        '',
+        '📊 Cuotas pagadas: *2 de 4*',
+        '⏳ Pendientes: #3 a #4',
+        '➡️ Próxima: cuota #3 el *1 dic 2026* por *$ 360.000*',
+        '',
+        '¡Gracias por su pago!',
+        '_Inversiones Wilson Gómez_',
+      ].join('\n'),
+    );
   });
 
   it('interest only with the remainder moved to a new date', () => {
@@ -116,10 +161,10 @@ describe('paymentReceipt', () => {
       rescheduled: [{ installmentNumber: 2, newDueDate: '2026-11-16' }],
     };
     const text = plain(paymentReceipt({ payment, loan: partly }));
-    assert.match(text, /\(transferencia\)/);
-    assert.match(text, /Abono de intereses a: cuota #2 \(\$ 60\.000\)\./);
-    assert.match(text, /El saldo de la cuota #2 quedó para el 16 nov 2026\./);
-    assert.match(text, /Próxima cuota: #2 el 16 nov 2026 por \$ 300\.000\./);
+    assert.match(text, /💳 Medio: Transferencia/);
+    assert.match(text, /• Cuota #2: \$ 60\.000 \(intereses\)/);
+    assert.match(text, /🔁 El saldo de la cuota #2 quedó para el \*16 nov 2026\*/);
+    assert.match(text, /➡️ Próxima: cuota #2 el \*16 nov 2026\* por \*\$ 300\.000\*/);
   });
 
   it('a prepayment shows the principal; a paid-off loan says so', () => {
@@ -133,8 +178,16 @@ describe('paymentReceipt', () => {
     };
     const paidOff = { ...loan, principalBalance: 0, installments: loan.installments.map((r) => ({ ...r, status: r.installmentNumber === 4 ? 'cancelled' : 'paid' })) };
     const text = plain(paymentReceipt({ payment, loan: paidOff }));
-    assert.match(text, /Abono a capital: \$ 600\.000\./);
-    assert.match(text, /quedó pagado por completo/);
-    assert.doesNotMatch(text, /Próxima cuota/);
+    assert.match(text, /• Abono a capital: \$ 600\.000/);
+    assert.match(text, /🎉 \*¡Su crédito quedó pagado por completo!\*/);
+    assert.doesNotMatch(text, /Próxima/);
+  });
+
+  it('open-ended loans show the principal balance instead of installments left', () => {
+    const openEnded = { ...loan, numberOfInstallments: null, principalBalance: 1_500_000, installments: [row(1, 1, '2026-11-01', 100_000, 'paid'), row(2, 2, '2026-12-01', 75_000)] };
+    const payment = { paymentDate: '2026-11-06', amount: 600_000, paymentMethod: 'cash', paymentType: 'principal', principalAmount: 500_000, allocations: [{ installmentNumber: 1, principalAmount: 0, interestAmount: 100_000 }] };
+    const text = plain(paymentReceipt({ payment, loan: openEnded }));
+    assert.match(text, /📊 Saldo de capital: \*\$ 1\.500\.000\*/);
+    assert.doesNotMatch(text, /Cuotas pagadas/);
   });
 });
