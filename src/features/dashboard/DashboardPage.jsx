@@ -20,10 +20,11 @@ export function DashboardPage() {
         <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Hola, {firstName}</h1>
         <p className="text-sm text-slate-500">{formatDate(getToday())}</p>
       </div>
-      <div className="space-y-5">
+      {/* Phones: the quick actions come first, reachable without scrolling. Desktop: at the end, as before. */}
+      <div className="flex flex-col gap-5">
         {can('payments.read') && <TodaySection />}
         {can('reports.read') && <PortfolioSection />}
-        <QuickActions can={can} />
+        <QuickActions can={can} className="order-first lg:order-none" />
       </div>
     </>
   );
@@ -60,7 +61,7 @@ function PortfolioSection() {
   );
 }
 
-function QuickActions({ can }) {
+function QuickActions({ can, className = '' }) {
   const actions = [
     can('payments.read') && { to: '/collections', label: 'Cobrar', icon: HandCoins },
     can('loans.create') && { to: '/loans/new', label: 'Nuevo crédito', icon: Plus },
@@ -69,9 +70,9 @@ function QuickActions({ can }) {
   ].filter(Boolean);
   if (!actions.length) return null;
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className={`grid grid-cols-2 gap-3 sm:grid-cols-4 ${className}`}>
       {actions.map(({ to, label, icon }) => (
-        <Button key={to} to={to} variant="secondary" size="lg" icon={icon}>
+        <Button key={to} to={to} variant="secondary" icon={icon} className="h-12 px-2 sm:text-base">
           {label}
         </Button>
       ))}

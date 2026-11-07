@@ -151,7 +151,7 @@ function InstallmentsCard({ loan, openEnded, onReschedule }) {
   // Installments whose current date was set by hand.
   const rescheduled = new Set((loan.dueDateChanges ?? []).map((change) => `${change.installmentId}:${change.newDueDate}`));
   return (
-    <Card title="Cuotas" padded={false}>
+    <Card title={`Cuotas (${loan.installments.length})`} padded={false} collapsible>
       {openEnded && <p className="border-b border-slate-100 px-4 py-2 text-sm text-slate-500">Sin plazo fijo: cada mes se genera la cuota de interés sobre el saldo.</p>}
       <div className="overflow-x-auto">
         {/* Phones: the status goes under the date and only "Falta" (what to collect) is shown, so it fits without scrolling sideways. */}
