@@ -20,6 +20,7 @@ import { ExpenseCategoriesPage } from '../features/expenses/ExpenseCategoriesPag
 import { ReportsPage } from '../features/reports/ReportsPage.jsx';
 import { UsersPage } from '../features/users/UsersPage.jsx';
 import { InterestRatesPage } from '../features/interest-rates/InterestRatesPage.jsx';
+import { WrittenOffPage } from '../features/write-offs/WrittenOffPage.jsx';
 
 function NotFoundPage() {
   return (
@@ -61,6 +62,7 @@ export const router = createBrowserRouter([
           { path: 'reports', element: guarded('reports.read', <ReportsPage />) },
           { path: 'users', element: guarded('users.manage', <UsersPage />) },
           { path: 'interest-rates', element: guarded('interest_rates.manage', <InterestRatesPage />) },
+          { path: 'written-off', element: guarded('portfolio.write_off', <WrittenOffPage />) },
 
           { path: '*', element: <NotFoundPage /> },
         ],

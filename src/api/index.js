@@ -9,6 +9,7 @@ import { createExpensesApi } from './expenses.api.js';
 import { createUsersApi } from './users.api.js';
 import { createReportsApi } from './reports.api.js';
 import { createInterestRatesApi } from './interest-rates.api.js';
+import { createExportsApi, createWriteOffsApi } from './write-offs.api.js';
 
 // Listeners for "the session expired" (the AuthProvider subscribes).
 const unauthorizedListeners = new Set();
@@ -33,6 +34,8 @@ export const api = {
   users: createUsersApi(http),
   reports: createReportsApi(http),
   interestRates: createInterestRatesApi(http),
+  writeOffs: createWriteOffsApi(http),
+  exports: createExportsApi(http),
 };
 
 export { tokenStorage };

@@ -7,7 +7,7 @@ import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { Card } from '../../components/ui/Card.jsx';
 import { Pagination, SearchInput } from '../../components/ui/ListControls.jsx';
-import { EmptyState, ErrorState, LoadingState } from '../../components/ui/Feedback.jsx';
+import { Badge, EmptyState, ErrorState, LoadingState } from '../../components/ui/Feedback.jsx';
 import { formatPhone } from '../../utils/format.js';
 
 export function ClientListPage() {
@@ -50,7 +50,10 @@ export function ClientListPage() {
                       {client.fullName.slice(0, 1).toUpperCase()}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium text-slate-900">{client.fullName}</span>
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="truncate font-medium text-slate-900">{client.fullName}</span>
+                        {client.writtenOffAt && <Badge tone="danger">Castigado</Badge>}
+                      </span>
                       <span className="block truncate text-sm text-slate-500">
                         CC {client.nationalId} · {formatPhone(client.phoneCountryCode, client.phoneNumber)}
                       </span>

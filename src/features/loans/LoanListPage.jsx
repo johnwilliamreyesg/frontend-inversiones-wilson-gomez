@@ -13,6 +13,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../components/ui/Feedba
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Activos' },
   { value: 'paid_off', label: 'Pagados' },
+  { value: 'written_off', label: 'Castigados' },
   { value: 'cancelled', label: 'Cancelados' },
   { value: 'all', label: 'Todos' },
 ];

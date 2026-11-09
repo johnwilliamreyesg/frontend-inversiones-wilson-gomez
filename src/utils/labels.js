@@ -5,6 +5,7 @@ export const LOAN_STATUS = {
   paid_off: { label: 'Pagado', tone: 'success' },
   defaulted: { label: 'En mora', tone: 'danger' },
   cancelled: { label: 'Cancelado', tone: 'neutral' },
+  written_off: { label: 'Castigado', tone: 'danger' },
 };
 
 export const INSTALLMENT_STATUS = {

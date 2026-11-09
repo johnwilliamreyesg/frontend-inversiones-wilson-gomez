@@ -5,7 +5,7 @@ import { amountDueBy, paymentSuggestions } from '../../src/features/loans/loan-a
 import { describeTerms, paidLoans } from '../../src/features/loans/loan-terms.js';
 
 const TODAY = '2026-10-31';
-const biweekly = { ...emptyLoanForm(TODAY), principalAmount: 1_000_000, installmentAmount: 120_000, numberOfInstallments: '10' };
+const biweekly = { ...emptyLoanForm(TODAY), principalAmount: 1_000_000, monthlyInterestRate: '10', numberOfInstallments: '4' };
 const monthly = { ...emptyLoanForm(TODAY), frequency: 'monthly', principalAmount: 2_000_000, monthlyInterestRate: '5', paymentDay: '' };
 
 const issues = (schema, values) => {
@@ -24,14 +24,18 @@ describe('loan form', () => {
     assert.ok(Number.isNaN(parseInteger('1.5')));
   });
 
-  it('builds the biweekly payload with numbers', () => {
+  it('builds the biweekly payload: rate, installments and the two collection days (15 and 30 when empty)', () => {
     assert.deepEqual(toTermsPayload(biweekly), {
       frequency: 'biweekly',
       principalAmount: 1_000_000,
       startDate: TODAY,
-      installmentAmount: 120_000,
-      numberOfInstallments: 10,
+      monthlyInterestRate: 10,
+      numberOfInstallments: 4,
+      paymentDay: 15,
+      secondPaymentDay: 30,
     });
+    const days = toTermsPayload({ ...biweekly, paymentDay: '5', secondPaymentDay: '20' });
+    assert.deepEqual([days.paymentDay, days.secondPaymentDay], [5, 20]);
   });
 
   it('leaves out optional monthly fields when empty (open-ended loan)', () => {
@@ -56,28 +60,35 @@ describe('loan form', () => {
   it('accepts complete terms and rejects incomplete ones', () => {
     assert.deepEqual(issues(termsSchema({ today: TODAY }), biweekly), {});
     assert.deepEqual(issues(termsSchema({ today: TODAY }), monthly), {});
-    assert.ok(issues(termsSchema({ today: TODAY }), { ...biweekly, installmentAmount: null }).installmentAmount);
+    assert.ok(issues(termsSchema({ today: TODAY }), { ...biweekly, monthlyInterestRate: '' }).monthlyInterestRate);
+    assert.ok(issues(termsSchema({ today: TODAY }), { ...biweekly, numberOfInstallments: '' }).numberOfInstallments);
     assert.ok(issues(termsSchema({ today: TODAY }), { ...monthly, monthlyInterestRate: '' }).monthlyInterestRate);
   });
 
   it('applies the same rules as the backend', () => {
     const schema = termsSchema({ today: TODAY });
-    assert.equal(issues(schema, { ...biweekly, installmentAmount: 90_000 }).installmentAmount, 'Las cuotas no alcanzan a cubrir el capital prestado.');
+    assert.match(issues(schema, { ...biweekly, paymentDay: '15', secondPaymentDay: '18' }).secondPaymentDay, /separados al menos 7 días/);
+    assert.ok(issues(schema, { ...biweekly, secondPaymentDay: '40' }).secondPaymentDay);
     assert.ok(issues(schema, { ...biweekly, startDate: '2026-11-01' }).startDate);
     assert.ok(issues(schema, { ...monthly, paymentDay: '32' }).paymentDay);
     assert.ok(issues(schema, { ...monthly, monthlyInterestRate: '150' }).monthlyInterestRate);
   });
 
-  it('requires two different people to save', () => {
+  it('requires the client; the co-debtor is optional but must be another person', () => {
     const schema = loanFormSchema({ today: TODAY });
     assert.ok(issues(schema, biweekly).clientId);
+    assert.deepEqual(issues(schema, { ...biweekly, clientId: 3 }), {});
+    assert.equal(toLoanPayload({ ...biweekly, clientId: 3 }).coDebtorId, null);
     assert.equal(issues(schema, { ...biweekly, clientId: 3, coDebtorId: 3 }).coDebtorId, 'El codeudor debe ser una persona distinta al cliente.');
     assert.deepEqual(issues(schema, { ...biweekly, clientId: 3, coDebtorId: 4 }), {});
   });
 
   it('describes the terms in one line', () => {
     assert.match(describeTerms({ frequency: 'monthly', monthlyInterestRate: 5, numberOfInstallments: null }), /sin plazo fijo/);
-    assert.match(describeTerms({ frequency: 'biweekly', numberOfInstallments: 10, installmentAmount: 120000 }), /^10 cuotas quincenales/);
+    assert.match(describeTerms({ frequency: 'biweekly', numberOfInstallments: 10, installmentAmount: 120000 }), /^10 cuotas quincenales de/);
+    const withRate = describeTerms({ frequency: 'biweekly', monthlyInterestRate: 10, numberOfInstallments: 4, paymentDay: 5, secondPaymentDay: 20 });
+    assert.equal(withRate.replace(/\s/g, ' '), '10 % mensual · 4 cuotas quincenales (días 5 y 20)');
+    assert.match(describeTerms({ frequency: 'monthly', monthlyInterestRate: 5, numberOfInstallments: null, renegotiatedAt: '2026-11-09' }), /acuerdo de pago/);
   });
 });
 

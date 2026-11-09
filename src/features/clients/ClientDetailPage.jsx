@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
-import { Banknote, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { Archive, Banknote, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
+import { WriteOffClientDialog } from '../write-offs/WriteOffDialogs.jsx';
 import { useClient, useClientLoans, useDeleteClient } from './clients.queries.js';
 import { ClientPhotos } from './ClientPhotos.jsx';
 import { LoanRows } from '../loans/LoanRows.jsx';
@@ -12,7 +13,7 @@ import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { Card, DescriptionList } from '../../components/ui/Card.jsx';
 import { Button, buttonClasses } from '../../components/ui/Button.jsx';
 import { ConfirmDialog } from '../../components/ui/Modal.jsx';
-import { EmptyState, ErrorState, LoadingState } from '../../components/ui/Feedback.jsx';
+import { Alert, EmptyState, ErrorState, LoadingState } from '../../components/ui/Feedback.jsx';
 import { formatDateTime, formatPhone, phoneHref } from '../../utils/format.js';
 
 export function ClientDetailPage() {
@@ -22,6 +23,7 @@ export function ClientDetailPage() {
   const { data: client, error, isPending, refetch } = useClient(id);
   const remove = useDeleteClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [writingOff, setWritingOff] = useState(false);
 
   if (isPending) return <LoadingState />;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
@@ -43,9 +45,27 @@ export function ClientDetailPage() {
                 Editar
               </Button>
             </Can>
+            {!client.writtenOffAt && (
+              <Can permission="portfolio.write_off">
+                <Button variant="secondary" icon={Archive} className="text-red-700" onClick={() => setWritingOff(true)}>
+                  Castigar cartera
+                </Button>
+              </Can>
+            )}
           </>
         }
       />
+
+      {client.writtenOffAt && (
+        <Alert tone="danger" title="Cliente en cartera castigada" className="mb-5">
+          Desde el {formatDateTime(client.writtenOffAt)}. Motivo: {client.writeOffReason}. No se le pueden hacer créditos nuevos hasta que haga un acuerdo de pago.{' '}
+          {can('portfolio.write_off') && (
+            <Link to="/written-off" className="font-semibold underline">
+              Ir a cartera castigada
+            </Link>
+          )}
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-5">
@@ -59,7 +79,7 @@ export function ClientDetailPage() {
               ]}
             />
           </Card>
-          {can('loans.read') && <ClientLoans clientId={client.id} />}
+          {can('loans.read') && <ClientLoans clientId={client.id} canLend={!client.writtenOffAt} />}
         </div>
         <div className="space-y-5">
           <ClientPhotos clientId={client.id} />
@@ -77,6 +97,7 @@ export function ClientDetailPage() {
         </div>
       )}
 
+      <WriteOffClientDialog client={writingOff ? client : null} onClose={() => setWritingOff(false)} onDone={refetch} />
       <ConfirmDialog
         open={confirmDelete}
         onClose={() => {
@@ -103,9 +124,10 @@ function ClientPaidHistory({ clientId }) {
   return data ? <PaidLoansHistory loans={paidLoans(data.asDebtor)} /> : null;
 }
 
-function ClientLoans({ clientId }) {
+function ClientLoans({ clientId, canLend }) {
   const { data, error, isPending, refetch } = useClientLoans(clientId);
-  const newLoan = (
+  // A written-off client cannot get new loans.
+  const newLoan = canLend && (
     <Can permission="loans.create">
       <Button size="sm" icon={Plus} to={`/loans/new?clientId=${clientId}`}>
         Nuevo crédito

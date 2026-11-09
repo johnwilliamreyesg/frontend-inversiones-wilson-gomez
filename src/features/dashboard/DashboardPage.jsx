@@ -51,11 +51,19 @@ function PortfolioSection() {
   if (error) return <ErrorState error={error} onRetry={refetch} />;
   return (
     <Card title="Cartera" actions={<Button size="sm" variant="secondary" to="/reports" icon={ArrowRight}>Reportes</Button>}>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard label="Capital en la calle" value={data ? formatMoney(data.principalOutstanding) : '…'} tone="brand" />
         <StatCard label="Créditos abiertos" value={data ? data.openLoans : '…'} />
         <StatCard label="Valor en mora" value={data ? formatMoney(data.overdueAmount) : '…'} hint={data && `${data.overdueLoans} crédito(s)`} tone={data?.overdueAmount ? 'danger' : 'success'} />
         <StatCard label="Clientes" value={data ? data.clients : '…'} />
+        {/* Written-off loans are out of the figures above; shown apart. */}
+        <StatCard
+          label="Cartera castigada"
+          value={data ? formatMoney(data.writtenOffPrincipal) : '…'}
+          hint={data && `${data.writtenOffLoans} crédito(s)`}
+          tone={data?.writtenOffPrincipal ? 'danger' : 'default'}
+          className="col-span-2 lg:col-span-1"
+        />
       </div>
     </Card>
   );

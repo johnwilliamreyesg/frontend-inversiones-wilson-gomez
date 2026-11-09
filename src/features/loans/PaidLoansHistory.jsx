@@ -4,11 +4,11 @@ import { Card } from '../../components/ui/Card.jsx';
 import { EmptyState } from '../../components/ui/Feedback.jsx';
 import { formatDate, formatMoney, formatPercent } from '../../utils/format.js';
 
-/** Rate column: monthly loans have a rate; biweekly ones an agreed installment. */
-const rateOf = (loan) =>
-  loan.frequency === 'monthly'
-    ? `${formatPercent(loan.monthlyInterestRate)} mensual`
-    : `Quincenal · ${loan.numberOfInstallments} × ${formatMoney(loan.installmentAmount)}`;
+/** Rate column; older biweekly loans had an agreed installment instead of a rate. */
+const rateOf = (loan) => {
+  if (!loan.monthlyInterestRate) return `Quincenal · ${loan.numberOfInstallments} × ${formatMoney(loan.installmentAmount)}`;
+  return `${formatPercent(loan.monthlyInterestRate)} mensual${loan.frequency === 'biweekly' ? ' · quincenal' : ''}`;
+};
 
 /**
  * "Créditos pagados (historial)": number, disbursement, payoff date, rate and

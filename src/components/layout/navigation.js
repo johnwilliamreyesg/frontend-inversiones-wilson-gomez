@@ -1,4 +1,4 @@
-import { Banknote, BarChart3, HandCoins, Home, Percent, Receipt, ShieldCheck, Users, Wallet } from 'lucide-react';
+import { Archive, Banknote, BarChart3, HandCoins, Home, Percent, Receipt, ShieldCheck, Users, Wallet } from 'lucide-react';
 
 /**
  * Menu entries (desktop sidebar and phone drawer). `permission` hides an
@@ -13,6 +13,7 @@ export const NAVIGATION = [
   { to: '/payments', label: 'Pagos recibidos', icon: Wallet, permission: 'payments.read' },
   { to: '/expenses', label: 'Gastos', icon: Receipt, permission: 'expenses.read' },
   { to: '/reports', label: 'Reportes', icon: BarChart3, permission: 'reports.read' },
+  { to: '/written-off', label: 'Cartera castigada', icon: Archive, permission: 'portfolio.write_off' },
   { to: '/users', label: 'Usuarios y roles', icon: ShieldCheck, permission: 'users.manage' },
   { to: '/interest-rates', label: 'Tasas de interés', icon: Percent, permission: 'interest_rates.manage' },
 ];

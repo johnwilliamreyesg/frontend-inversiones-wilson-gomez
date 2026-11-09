@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { hasFixedTerm, interestOnlySuggestions, principalPrepayment, splitPrepayment } from '../../src/features/loans/loan-amounts.js';
+import { agreementPreview } from '../../src/features/write-offs/agreement.js';
 
 const TODAY = '2026-11-06';
 
@@ -87,5 +88,26 @@ describe('splitPrepayment', () => {
 
   it('no floating-point drift with cents', () => {
     assert.deepEqual(splitPrepayment(0.3, 0.1), { toOverdue: 0.1, toPrincipal: 0.2 });
+  });
+});
+
+describe('agreementPreview (written-off loan)', () => {
+  it('less than the balance: the rest of the principal is forgiven', () => {
+    assert.deepEqual(agreementPreview({ principalBalance: 900_000, agreedAmount: 600_000, numberOfInstallments: 3 }), {
+      principal: 600_000,
+      interest: 0,
+      forgiven: 300_000,
+      installment: 200_000,
+    });
+  });
+
+  it('more than the balance: the excess is interest', () => {
+    const preview = agreementPreview({ principalBalance: 500_000, agreedAmount: 550_000, numberOfInstallments: 2 });
+    assert.deepEqual([preview.principal, preview.interest, preview.forgiven], [500_000, 50_000, 0]);
+  });
+
+  it('nothing to show until amount and installments are set', () => {
+    assert.equal(agreementPreview({ principalBalance: 1, agreedAmount: null, numberOfInstallments: 2 }), null);
+    assert.equal(agreementPreview({ principalBalance: 1, agreedAmount: 10, numberOfInstallments: 0 }), null);
   });
 });

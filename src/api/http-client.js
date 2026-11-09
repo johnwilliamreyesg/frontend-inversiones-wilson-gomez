@@ -88,6 +88,30 @@ export class HttpClient {
     return this.request('DELETE', path);
   }
 
+  /**
+   * A file (Excel, PDF...) with the session token: resolves to { blob, filename },
+   * the name taken from Content-Disposition. Errors behave like any request.
+   */
+  async download(path, query) {
+    const headers = {};
+    const token = this.getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    let response;
+    try {
+      response = await this.fetch(`${this.baseUrl}${path}${buildQueryString(query)}`, { headers });
+    } catch {
+      throw ApiError.network();
+    }
+    if (!response.ok) {
+      const error = ApiError.fromResponseBody(response.status, await this.#readBody(response));
+      if (response.status === 401 && token) this.onUnauthorized(error);
+      throw error;
+    }
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const filename = /filename="?([^";]+)"?/.exec(disposition)?.[1] ?? 'archivo';
+    return { blob: await response.blob(), filename };
+  }
+
   /** multipart/form-data upload; the browser sets the Content-Type boundary itself. */
   upload(method, path, formData) {
     return this.request(method, path, { formData });

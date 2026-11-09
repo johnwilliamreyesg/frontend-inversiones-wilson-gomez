@@ -11,6 +11,8 @@ const MODULE_LABELS = {
   clients: 'Clientes',
   loans: 'Créditos',
   interest_rates: 'Tasas de interés',
+  portfolio: 'Cartera castigada',
+  backup: 'Copia de seguridad',
   payments: 'Cobros y pagos',
   expenses: 'Gastos',
   reports: 'Reportes',

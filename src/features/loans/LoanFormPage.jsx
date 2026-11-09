@@ -42,8 +42,8 @@ function LoanForm({ presetClient }) {
   const [generalError, setGeneralError] = useState(null);
   const [client, setClient] = useState(presetClient);
   const [coDebtor, setCoDebtor] = useState(null);
-  // Search text when "Crear cliente nuevo" was pressed (null = dialog closed).
-  const [newClientSearch, setNewClientSearch] = useState(null);
+  // "Crear cliente nuevo" from one of the pickers: which one and what was typed (null = closed).
+  const [newClient, setNewClient] = useState(null);
   const { can } = useAuth();
 
   const schema = useMemo(() => loanFormSchema({ today }), [today]);
@@ -59,7 +59,7 @@ function LoanForm({ presetClient }) {
 
   const values = useWatch({ control });
   const frequency = values.frequency;
-  const rates = useInterestRates({ enabled: frequency === 'monthly' });
+  const rates = useInterestRates();
 
   // Preview as soon as the money terms are complete (after a short pause in typing).
   // Compared as text: the watched values are a new object on every render.
@@ -87,10 +87,10 @@ function LoanForm({ presetClient }) {
   return (
     <>
       <NewClientDialog
-        open={newClientSearch !== null}
-        search={newClientSearch}
-        onClose={() => setNewClientSearch(null)}
-        onCreated={pickParty('clientId', setClient)}
+        open={newClient !== null}
+        search={newClient?.search}
+        onClose={() => setNewClient(null)}
+        onCreated={newClient?.field === 'coDebtorId' ? pickParty('coDebtorId', setCoDebtor) : pickParty('clientId', setClient)}
       />
       <PageHeader title="Nuevo crédito" backTo={presetClient ? `/clients/${presetClient.id}` : '/loans'} />
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -104,10 +104,16 @@ function LoanForm({ presetClient }) {
                 onChange={pickParty('clientId', setClient)}
                 excludeId={coDebtor?.id}
                 error={errors.clientId?.message}
-                // Only the debtor can be created here; the co-debtor must already be a client.
-                onCreateNew={can('clients.create') ? setNewClientSearch : undefined}
+                onCreateNew={can('clients.create') ? (search) => setNewClient({ field: 'clientId', search }) : undefined}
               />
-              <ClientPicker label="Codeudor" required value={coDebtor} onChange={pickParty('coDebtorId', setCoDebtor)} excludeId={client?.id} error={errors.coDebtorId?.message} />
+              <ClientPicker
+                label="Codeudor (opcional)"
+                value={coDebtor}
+                onChange={pickParty('coDebtorId', setCoDebtor)}
+                excludeId={client?.id}
+                error={errors.coDebtorId?.message}
+                onCreateNew={can('clients.create') ? (search) => setNewClient({ field: 'coDebtorId', search }) : undefined}
+              />
             </div>
           </Card>
 
@@ -135,28 +141,31 @@ function LoanForm({ presetClient }) {
                 />
               </div>
 
+              <RateSelect
+                rates={rates}
+                hint={frequency === 'biweekly' ? 'Tasa mensual: cada quincena se cobra la mitad.' : null}
+                error={errors.monthlyInterestRate?.message}
+                {...register('monthlyInterestRate')}
+              />
               {frequency === 'biweekly' ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Controller
-                    control={control}
-                    name="installmentAmount"
-                    render={({ field }) => <MoneyField label="Valor de cada cuota" required error={errors.installmentAmount?.message} {...field} />}
-                  />
-                  <TextField label="Número de cuotas" required inputMode="numeric" error={errors.numberOfInstallments?.message} {...register('numberOfInstallments')} />
-                </div>
+                <>
+                  <TextField label="Número de cuotas (quincenas)" required inputMode="numeric" error={errors.numberOfInstallments?.message} {...register('numberOfInstallments')} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <TextField label="Primer día de cobro" inputMode="numeric" placeholder="15" error={errors.paymentDay?.message} {...register('paymentDay')} />
+                    <TextField label="Segundo día de cobro" inputMode="numeric" placeholder="30" error={errors.secondPaymentDay?.message} {...register('secondPaymentDay')} />
+                  </div>
+                  <p className="-mt-2 text-sm text-slate-500">Vacíos: el 15 y el 30 de cada mes (en febrero, el último día).</p>
+                </>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <RateSelect rates={rates} error={errors.monthlyInterestRate?.message} {...register('monthlyInterestRate')} />
-                    <TextField
-                      label="Día de pago"
-                      inputMode="numeric"
-                      placeholder={values.startDate ? String(Number(values.startDate.slice(8, 10))) : ''}
-                      hint="Vacío: el mismo día del desembolso."
-                      error={errors.paymentDay?.message}
-                      {...register('paymentDay')}
-                    />
-                  </div>
+                  <TextField
+                    label="Día de pago"
+                    inputMode="numeric"
+                    placeholder={values.startDate ? String(Number(values.startDate.slice(8, 10))) : ''}
+                    hint="Vacío: el mismo día del desembolso."
+                    error={errors.paymentDay?.message}
+                    {...register('paymentDay')}
+                  />
                   <TextField
                     label="Número de cuotas"
                     inputMode="numeric"
@@ -189,13 +198,13 @@ function LoanForm({ presetClient }) {
 }
 
 /** The rates of the catalog (only active ones can be used for a new loan). */
-function RateSelect({ rates, error, ...field }) {
+function RateSelect({ rates, error, hint: extraHint, ...field }) {
   const options = rates.data ?? [];
   const hint = rates.error
     ? 'No se pudieron cargar las tasas.'
     : rates.data && options.length === 0
       ? 'No hay tasas activas. Pídale al administrador que active al menos una.'
-      : null;
+      : extraHint;
   return (
     <SelectField label="Interés mensual" required hint={hint} error={error} disabled={rates.isPending} {...field}>
       <option value="">{rates.isPending ? 'Cargando…' : 'Elija la tasa'}</option>
@@ -261,7 +270,9 @@ function SchedulePreview({ terms, preview, frequency }) {
               {!openEnded && (
                 <tfoot className="tabular border-t-2 border-slate-200 bg-slate-50 font-semibold">
                   <tr>
-                    <td className="px-4 py-2" colSpan={2}>
+                    {/* Separate "#" cell: a colSpan would count a column that phones hide. */}
+                    <td className="hidden px-4 py-2 sm:table-cell" />
+                    <td className="py-2 pl-4 pr-2 sm:pl-2">
                       Total
                       <span className="block text-[11px] font-normal text-slate-500 sm:hidden">
                         Capital {formatMoney(preview.data.totals.principal)} · Interés {formatMoney(preview.data.totals.interest)}

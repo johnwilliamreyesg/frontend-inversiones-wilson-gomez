@@ -1,5 +1,8 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Can } from '../../auth/guards.jsx';
+import { DownloadButton } from '../../components/ui/DownloadButton.jsx';
+import { saveFile } from '../../utils/files.js';
 import { api } from '../../api/index.js';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { PageHeader } from '../../components/ui/PageHeader.jsx';
@@ -21,7 +24,17 @@ export function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Reportes" subtitle="Excluyen pagos anulados, créditos cancelados y gastos eliminados." />
+      <PageHeader
+        title="Reportes"
+        subtitle="Excluyen pagos anulados, créditos cancelados, cartera castigada y gastos eliminados."
+        actions={
+          <Can permission="backup.download">
+            <DownloadButton icon={Download} load={() => api.exports.backup()} onFile={saveFile}>
+              Backup en Excel
+            </DownloadButton>
+          </Can>
+        }
+      />
       <div className="mb-4">
         <SegmentedControl label="Vista" options={VIEWS} value={filters.view} onChange={(view) => setFilters({ view })} />
       </div>

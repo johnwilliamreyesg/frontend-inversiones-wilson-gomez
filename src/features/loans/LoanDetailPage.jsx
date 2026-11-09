@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { Ban, CalendarClock, HandCoins, Undo2 } from 'lucide-react';
+import { Ban, CalendarClock, HandCoins, Handshake, Undo2 } from 'lucide-react';
+import { RenegotiateDialog } from '../write-offs/WriteOffDialogs.jsx';
 import { useCancelLoan, useLoan, useLoanPayments } from './loans.queries.js';
 import { useClientLoans } from '../clients/clients.queries.js';
 import { PaidLoansHistory } from './PaidLoansHistory.jsx';
@@ -16,7 +17,7 @@ import { PageHeader } from '../../components/ui/PageHeader.jsx';
 import { Card, DescriptionList, StatCard } from '../../components/ui/Card.jsx';
 import { Button } from '../../components/ui/Button.jsx';
 import { ConfirmDialog } from '../../components/ui/Modal.jsx';
-import { Badge, EmptyState, ErrorState, LoadingState } from '../../components/ui/Feedback.jsx';
+import { Alert, Badge, EmptyState, ErrorState, LoadingState } from '../../components/ui/Feedback.jsx';
 import { INSTALLMENT_STATUS, FREQUENCY, PAYMENT_METHOD, PAYMENT_TYPE, RECALCULATION } from '../../utils/labels.js';
 import { formatDate, formatDateTime, formatDays, formatMoney } from '../../utils/format.js';
 import { today as getToday } from '../../utils/dates.js';
@@ -30,6 +31,7 @@ export function LoanDetailPage() {
   const [paying, setPaying] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [rescheduling, setRescheduling] = useState(null);
+  const [negotiating, setNegotiating] = useState(false);
   const cancel = useCancelLoan();
 
   if (isPending) return <LoadingState />;
@@ -69,6 +71,11 @@ export function LoanDetailPage() {
                 <span className="hidden sm:inline">Recordar por WhatsApp</span>
               </WhatsAppButton>
             )}
+            {loan.status === 'written_off' && can('portfolio.write_off') && (
+              <Button icon={Handshake} onClick={() => setNegotiating(true)}>
+                Acuerdo de pago
+              </Button>
+            )}
             {loan.status === 'active' && can('loans.update') && (
               <Button variant="secondary" icon={Ban} onClick={() => setCancelling(true)}>
                 Cancelar crédito
@@ -77,6 +84,12 @@ export function LoanDetailPage() {
           </>
         }
       />
+
+      {loan.status === 'written_off' && (
+        <Alert tone="danger" title="Crédito en cartera castigada" className="mb-5">
+          Castigado el {formatDateTime(loan.writtenOffAt)}. No recibe pagos ni cuenta en los cálculos del mes hasta que se haga un acuerdo de pago.
+        </Alert>
+      )}
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Saldo de capital" value={formatMoney(loan.principalBalance)} hint={`de ${formatMoney(loan.principalAmount)} prestados`} tone="brand" />
@@ -99,6 +112,7 @@ export function LoanDetailPage() {
           <InstallmentsCard loan={loan} openEnded={openEnded} onReschedule={isOpen && can('loans.update') ? setRescheduling : null} />
           {can('payments.read') && <PaymentsCard loanId={loan.id} canVoid={can('payments.void')} />}
           {loan.dueDateChanges?.length > 0 && <DueDateHistoryCard changes={loan.dueDateChanges} />}
+          {loan.renegotiations?.length > 0 && <RenegotiationsCard renegotiations={loan.renegotiations} />}
         </div>
         <Card title="Condiciones" collapsible className="self-start">
           <DescriptionList
@@ -109,7 +123,17 @@ export function LoanDetailPage() {
               { label: 'Valor prestado', value: formatMoney(loan.principalAmount) },
               { label: 'Desembolso', value: formatDate(loan.startDate) },
               loan.frequency === 'monthly' && { label: 'Día de pago', value: `${loan.paymentDay} de cada mes` },
-              { label: 'Codeudor', value: <Link className="text-brand-700 hover:underline" to={`/clients/${loan.coDebtorId}`}>{loan.coDebtorName}</Link> },
+              loan.frequency === 'biweekly' && loan.secondPaymentDay && { label: 'Días de cobro', value: `${loan.paymentDay} y ${loan.secondPaymentDay} de cada mes` },
+              {
+                label: 'Codeudor',
+                value: loan.coDebtorId ? (
+                  <Link className="text-brand-700 hover:underline" to={`/clients/${loan.coDebtorId}`}>
+                    {loan.coDebtorName}
+                  </Link>
+                ) : (
+                  'Sin codeudor'
+                ),
+              },
               loan.notes && { label: 'Notas', value: <span className="whitespace-pre-line">{loan.notes}</span> },
               { label: 'Registrado', value: formatDateTime(loan.createdAt) },
             ]}
@@ -122,6 +146,7 @@ export function LoanDetailPage() {
       </div>
 
       <RescheduleDialog loan={loan} installment={rescheduling} onClose={() => setRescheduling(null)} />
+      <RenegotiateDialog loan={negotiating ? loan : null} onClose={() => setNegotiating(false)} />
       <PaymentDialog
         open={paying}
         onClose={() => setPaying(false)}
@@ -232,6 +257,28 @@ function ClientPaidLoans({ clientId, clientName, excludeId }) {
   if (!data) return null;
   const firstName = clientName.split(' ')[0];
   return <PaidLoansHistory loans={paidLoans(data.asDebtor, { excludeId })} title={`Créditos pagados de ${firstName}`} />;
+}
+
+/** Payment agreements made after the loan was written off: what was owed, agreed and forgiven. */
+function RenegotiationsCard({ renegotiations }) {
+  return (
+    <Card title={`Acuerdos de pago (${renegotiations.length})`} padded={false} collapsible>
+      <ul className="divide-y divide-slate-100">
+        {renegotiations.map((item) => (
+          <li key={item.id} className="px-4 py-3 text-sm">
+            <p className="tabular font-medium text-slate-900">
+              Debía {formatMoney(item.previousBalance)} → acordado {formatMoney(item.agreedAmount)} en {item.numberOfInstallments} cuota(s) {FREQUENCY[item.frequency].toLowerCase()}(es)
+            </p>
+            {item.forgivenPrincipal > 0 && <p className="tabular text-red-700">Capital perdonado: {formatMoney(item.forgivenPrincipal)}</p>}
+            <p className="text-slate-500">
+              {formatDateTime(item.createdAt)} · {item.createdByName ?? '—'} · primera cuota {formatDate(item.firstDueDate)}
+              {item.notes && ` · ${item.notes}`}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
 }
 
 /** Every due date moved by hand: when, from which date to which, by whom and why. */

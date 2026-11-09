@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { CalendarCheck, CalendarClock, HandCoins, MapPin, Phone, UserRound } from 'lucide-react';
+import { CalendarCheck, CalendarClock, FileDown, HandCoins, MapPin, Phone, Printer, UserRound } from 'lucide-react';
 import { useCollections, useUpcoming } from './collections.queries.js';
 import { PaymentDialog } from '../payments/PaymentDialog.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
@@ -16,6 +16,9 @@ import { FREQUENCY } from '../../utils/labels.js';
 import { formatDate, formatDays, formatMoney, phoneHref } from '../../utils/format.js';
 import { collectionReminder, upcomingReminder } from '../../utils/whatsapp.js';
 import { today as getToday } from '../../utils/dates.js';
+import { api } from '../../api/index.js';
+import { saveFile, printPdf } from '../../utils/files.js';
+import { DownloadButton } from '../../components/ui/DownloadButton.jsx';
 
 const TAB_OPTIONS = [
   { value: 'today', label: 'Hoy' },
@@ -58,11 +61,12 @@ export function CollectionsPage() {
 
 function TodayView({ filters, setFilters, today }) {
   const { can } = useAuth();
-  const { data, error, isPending, refetch } = useCollections({
+  const query = {
     date: filters.date === today ? undefined : filters.date,
     search: filters.search,
     onlyOverdue: filters.view === 'overdue' ? 'true' : undefined,
-  });
+  };
+  const { data, error, isPending, refetch } = useCollections(query);
   const [paying, setPaying] = useState(null);
 
   return (
@@ -80,6 +84,16 @@ function TodayView({ filters, setFilters, today }) {
         <SearchInput value={filters.search} onChange={(search) => setFilters({ search })} placeholder="Buscar por nombre, cédula o dirección" />
         <SegmentedControl label="Vista" options={VIEW_OPTIONS} value={filters.view} onChange={(view) => setFilters({ view })} />
         <TextField type="date" aria-label="Fecha" max={today} value={filters.date} onChange={(event) => setFilters({ date: event.target.value || today })} />
+      </div>
+
+      {/* The same list (same filters) as a PDF to download or print. */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        <DownloadButton icon={FileDown} load={() => api.exports.collectionsPdf(query)} onFile={saveFile}>
+          Descargar PDF
+        </DownloadButton>
+        <DownloadButton icon={Printer} load={() => api.exports.collectionsPdf(query)} onFile={printPdf}>
+          Imprimir
+        </DownloadButton>
       </div>
 
       {isPending ? (
@@ -137,15 +151,17 @@ function CollectionCard({ row, canPay, onPay }) {
             {row.clientAddress}
           </p>
         )}
-        <p className="flex gap-2">
-          <UserRound className="mt-0.5 size-4 shrink-0 text-slate-400" aria-hidden="true" />
-          Codeudor: {row.coDebtorName}
-          {row.coDebtorPhoneNumber && (
-            <a href={phoneHref(row.coDebtorPhoneCountryCode, row.coDebtorPhoneNumber)} className="text-brand-700 hover:underline">
-              {row.coDebtorPhoneNumber}
-            </a>
-          )}
-        </p>
+        {row.coDebtorName && (
+          <p className="flex gap-2">
+            <UserRound className="mt-0.5 size-4 shrink-0 text-slate-400" aria-hidden="true" />
+            Codeudor: {row.coDebtorName}
+            {row.coDebtorPhoneNumber && (
+              <a href={phoneHref(row.coDebtorPhoneCountryCode, row.coDebtorPhoneNumber)} className="text-brand-700 hover:underline">
+                {row.coDebtorPhoneNumber}
+              </a>
+            )}
+          </p>
+        )}
       </div>
 
       <ContactButtons row={row} message={collectionReminder(row)}>
